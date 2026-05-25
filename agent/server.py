@@ -28,6 +28,10 @@ from core.executor import (
 from core.skill_manager import get_registry
 from core.task_queue import get_queue
 from core.scheduler import get_scheduler
+from core.security import (
+    check_request_safety, check_if_blocked, apply_strike,
+    check_rate_limit, get_security_status, is_path_blocked
+)
 
 app = Flask(__name__)
 CORS(app)
@@ -82,6 +86,13 @@ def _log_history(user_id, action, detail, tokens_used=0):
         f.write(json.dumps(entry, ensure_ascii=False) + "\n")
 
 
+# ── API: 보안 ──
+
+@app.route("/api/security", methods=["GET"])
+def api_security():
+    return jsonify(get_security_status())
+
+
 # ── API: 상태 ──
 
 @app.route("/api/status", methods=["GET"])
@@ -104,16 +115,44 @@ def api_status():
 
 @app.route("/api/execute", methods=["POST"])
 def api_execute():
-    """명령 실행"""
+    """명령 실행 (보안 적용)"""
     config = _load_config()
     data = request.get_json() or {}
 
-    # 라이선스 체크
+    # ── Layer 1: 라이선스 체크 ──
     if not _check_license():
         return jsonify({"error": "라이선스 검증 실패"})
 
+    # ── Layer 2: 계정 차단 체크 ──
+    blocked = check_if_blocked()
+    if blocked.get("blocked"):
+        return jsonify({"error": blocked["reason"], "security": blocked})
+
+    # ── Layer 2: 요청 안전 검사 ──
     action = data.get("action", "")
     params = data.get("params", {})
+    prompt = data.get("prompt", "") or json.dumps(data)
+
+    safety = check_request_safety(prompt, action, params)
+    if not safety.get("safe"):
+        strike_result = apply_strike(safety.get("violations", []))
+        _log_history("security_violation", str(safety["violations"]), strike_result, 0)
+        return jsonify({
+            "error": safety.get("violations", []),
+            "message": "보안 위반이 감지되었습니다",
+            "strike": strike_result
+        })
+
+    # ── Layer 2: Rate Limit ──
+    rate = check_rate_limit(10)
+    if not rate.get("allowed"):
+        return jsonify({"error": "요청이 너무 빠릅니다. 잠시 후 다시 시도해주세요", "retry_after": rate.get("retry_after", 0)})
+
+    # ── Layer 1: 경로 차단 ──
+    check_path = params.get("path", "")
+    if check_path and is_path_blocked(check_path):
+        _log_history("blocked_path", check_path, {}, 0)
+        return jsonify({"error": "접근이 차단된 경로입니다"})
 
     # 토큰 예상 소비량
     est_tokens = estimate_tokens(len(json.dumps(data)), params.get("complexity", "normal"))
