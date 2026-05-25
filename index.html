@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>OPERA AI — PC Local AI Agent</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{--black:#080808;--white:#f4f4f0;--gray:#111;--gray2:#1a1a1a;--muted:#888;--accent:#c8ff00;--green:#22d3a0;--red:#ff5a5a;--blue:#60a5fa;--border:#222}
+body{background:var(--black);color:var(--white);font-family:'Space Grotesk',sans-serif;font-size:16px;line-height:1.5}
+nav{position:fixed;top:0;left:0;right:0;z-index:100;display:flex;align-items:center;justify-content:space-between;padding:24px 40px;background:rgba(8,8,8,0.9);backdrop-filter:blur(20px);border-bottom:1px solid var(--border)}
+.logo{font-family:'Space Mono',monospace;font-size:15px;font-weight:700;letter-spacing:2px;color:var(--white);text-decoration:none}
+.logo span{color:var(--accent)}
+.nav-right{display:flex;align-items:center;gap:24px}
+.nav-link{color:var(--muted);text-decoration:none;font-size:13px;transition:color .2s}
+.nav-link:hover{color:var(--white)}
+.nav-cta{font-family:'Space Mono',monospace;font-size:11px;font-weight:700;letter-spacing:1px;color:var(--black);background:var(--accent);padding:10px 20px;text-decoration:none}
+.hero{min-height:100vh;display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);border-bottom:1px solid var(--border);overflow:hidden}
+.hero-left{display:flex;flex-direction:column;justify-content:flex-end;padding:160px 60px 80px;border-right:1px solid var(--border)}
+.hero-tag{font-family:'Space Mono',monospace;font-size:11px;letter-spacing:3px;color:var(--accent);margin-bottom:40px;text-transform:uppercase}
+h1{font-size:clamp(40px,5vw,72px);font-weight:700;line-height:.95;letter-spacing:-3px;margin-bottom:32px}
+h1 em{font-style:normal;color:var(--accent)}
+.sub{font-size:16px;color:var(--muted);max-width:380px;line-height:1.8;margin-bottom:48px}
+.hero-actions{display:flex;gap:16px;flex-wrap:wrap}
+.btn-main{font-family:'Space Mono',monospace;font-size:12px;font-weight:700;letter-spacing:1px;background:var(--accent);color:var(--black);padding:14px 28px;text-decoration:none}
+.btn-outline{font-family:'Space Mono',monospace;font-size:12px;font-weight:700;letter-spacing:1px;background:transparent;color:var(--white);padding:14px 28px;text-decoration:none;border:1px solid var(--border)}
+.hero-right{display:flex;flex-direction:column;justify-content:flex-end;padding:160px 60px 80px}
+.hero-demo{background:var(--gray);border:1px solid var(--border);padding:32px;font-family:'Space Mono',monospace;font-size:13px;line-height:2;position:relative;overflow:hidden}
+.hero-demo::before{content:'>_';color:var(--accent)}
+.demo-cursor{display:inline-block;width:8px;height:16px;background:var(--accent);animation:blink 1s infinite;margin-left:4px;vertical-align:middle}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:0}}
+.features{border-bottom:1px solid var(--border)}
+.features-grid{display:grid;grid-template-columns:repeat(3,1fr)}
+.feature{padding:80px 48px;border-right:1px solid var(--border)}
+.feature:last-child{border-right:none}
+.feature-icon{font-size:32px;margin-bottom:24px;display:block}
+.feature-title{font-size:18px;font-weight:500;margin-bottom:16px}
+.feature-desc{font-size:14px;color:var(--muted);line-height:1.8}
+.how-section{border-bottom:1px solid var(--border);padding:80px 60px}
+.how-header{font-family:'Space Mono',monospace;font-size:11px;letter-spacing:3px;color:var(--accent);margin-bottom:48px;text-transform:uppercase}
+.how-steps{display:grid;grid-template-columns:repeat(3,1fr);gap:48px}
+.step{padding:32px;border:1px solid var(--border);background:var(--gray)}
+.step-n{font-family:'Space Mono',monospace;font-size:32px;font-weight:700;color:var(--accent);margin-bottom:16px}
+.step-title{font-size:16px;font-weight:500;margin-bottom:12px}
+.step-desc{font-size:13px;color:var(--muted);line-height:1.7}
+.pricing-section{padding:80px 60px;border-bottom:1px solid var(--border)}
+.pricing-header{font-family:'Space Mono',monospace;font-size:11px;letter-spacing:3px;color:var(--accent);margin-bottom:48px;text-transform:uppercase}
+.pricing-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:var(--border);border:1px solid var(--border)}
+.plan{padding:48px 40px;background:var(--black)}
+.plan.hot{background:var(--gray);border:1px solid var(--accent);position:relative}
+.plan-name{font-family:'Space Mono',monospace;font-size:11px;letter-spacing:2px;color:var(--muted);text-transform:uppercase;margin-bottom:24px}
+.plan-price{font-size:40px;font-weight:700;letter-spacing:-2px;margin-bottom:4px}
+.plan-price span{font-size:14px;color:var(--muted);font-weight:400}
+.plan-desc{font-size:13px;color:var(--muted);margin-bottom:32px;line-height:1.6}
+.plan-feats{list-style:none;margin-bottom:32px}
+.plan-feats li{font-size:13px;padding:8px 0;border-bottom:1px solid var(--border);color:var(--muted)}
+.plan-feats li::before{content:'✓ ';color:var(--accent)}
+.plan-cta{display:block;font-family:'Space Mono',monospace;font-size:11px;font-weight:700;letter-spacing:1px;text-align:center;padding:14px;background:var(--accent);color:var(--black);text-decoration:none}
+.plan-cta:hover{opacity:.9}
+.hot-badge{position:absolute;top:12px;right:12px;font-family:'Space Mono',monospace;font-size:9px;letter-spacing:1px;background:var(--accent);color:var(--black);padding:4px 10px}
+.cta-section{padding:120px 60px;text-align:center}
+.cta-section h2{font-size:clamp(32px,4vw,56px);font-weight:700;letter-spacing:-2px;margin-bottom:24px}
+.cta-section p{color:var(--muted);margin-bottom:40px;font-size:16px}
+footer{padding:40px 60px;border-top:1px solid var(--border);display:flex;justify-content:space-between;font-size:12px;color:var(--muted);font-family:'Space Mono',monospace}
+footer a{color:var(--muted);text-decoration:none}
+footer a:hover{color:var(--white)}
+@media(max-width:768px){.hero{grid-template-columns:1fr}.hero-left,.hero-right{padding:100px 24px 60px}.features-grid{grid-template-columns:1fr}.feature{padding:40px 24px;border-right:none;border-bottom:1px solid var(--border)}.how-steps{grid-template-columns:1fr}.pricing-grid{grid-template-columns:1fr}.pricing-section,.how-section,.cta-section{padding:60px 24px}footer{flex-direction:column;gap:12px;padding:24px}}
+</style>
+</head>
+<body>
+<nav>
+  <a href="/" class="logo">OPERA<span>_AI</span></a>
+  <div class="nav-right">
+    <a href="#features" class="nav-link">Features</a>
+    <a href="#pricing" class="nav-link">Pricing</a>
+    <a href="/login" class="nav-link">Dashboard</a>
+    <a href="#download" class="nav-cta">DOWNLOAD →</a>
+  </div>
+</nav>
+
+<section class="hero" id="top">
+  <div class="hero-left">
+    <div class="hero-tag">// PC Local AI Agent</div>
+    <h1>PC에서 직접<br>일하는 AI, <em>리치</em></h1>
+    <p class="sub">마우스와 키보드를 직접 움직이며 XG5000, 화물 프로그램, 문서 작업을 대신합니다. 당신의 PC가 AI 직원을 얻습니다.</p>
+    <div class="hero-actions">
+      <a href="#download" class="btn-main">FREE DOWNLOAD →</a>
+      <a href="#features" class="btn-outline">LEARN MORE</a>
+    </div>
+  </div>
+  <div class="hero-right">
+    <div class="hero-demo">
+      리치야, XG5000 열고 탱크 제어 프로그램 만들어줘<br>
+      <span style="color:var(--accent)">→</span> XG5000 실행 중...<br>
+      <span style="color:var(--accent)">→</span> 새 프로젝트 생성 (XGK)<br>
+      <span style="color:var(--accent)">→</span> 래더 프로그램 작성 중...<br>
+      <span style="color:var(--accent)">→</span> 변수/설명문 등록 완료<br>
+      <span style="color:var(--accent)">→</span> PLC 쓰기 → RUN 전환 ✅<br>
+      <span style="color:var(--green)">✅ TANK_CTRL 공정 구현 완료!</span><span class="demo-cursor"></span>
+    </div>
+  </div>
+</section>
+
+<section class="features" id="features">
+  <div class="features-grid">
+    <div class="feature">
+      <span class="feature-icon">⚡</span>
+      <div class="feature-title">XG5000 완전 자동화</div>
+      <div class="feature-desc">래더 프로그램 작성부터 PLC 쓰기, 모니터링까지 XG5000의 모든 기능을 AI가 직접 제어합니다. 사람이 하는 것처럼 마우스와 키보드를 움직이며 작업합니다.</div>
+    </div>
+    <div class="feature">
+      <span class="feature-icon">📊</span>
+      <div class="feature-title">화물/데이터 수집</div>
+      <div class="feature-desc">원콜, 24시 등 화물 프로그램에 로그인하여 배차 현황, 미수금, 입금내역을 자동으로 수집하고 정리합니다. 오늘/이번주/이번달 통계를 TG로 받아보세요.</div>
+    </div>
+    <div class="feature">
+      <span class="feature-icon">🖥️</span>
+      <div class="feature-title">PC 전권 위임</div>
+      <div class="feature-desc">앱 실행, 파일 관리, 웹 서핑, 데이터 정리까지 PC에서 할 수 있는 모든 일을 리치에게 맡기세요. WOL로 PC를 켜고 작업 완료 후 자동 종료.</div>
+    </div>
+  </div>
+</section>
+
+<section class="how-section">
+  <div class="how-header">// How It Works</div>
+  <div class="how-steps">
+    <div class="step">
+      <div class="step-n">01</div>
+      <div class="step-title">Download & Install</div>
+      <div class="step-desc">Windows 또는 Mac용 OPERA AI를 다운로드하여 설치합니다. 1분이면 완료됩니다.</div>
+    </div>
+    <div class="step">
+      <div class="step-n">02</div>
+      <div class="step-title">Connect Telegram</div>
+      <div class="step-desc">텔레그램으로 리치에게 명령을 내리세요. "XG5000 열어", "원콜 데이터 수집해", "엑셀 정리해"</div>
+    </div>
+    <div class="step">
+      <div class="step-n">03</div>
+      <div class="step-title">Watch It Work</div>
+      <div class="step-desc">리치가 직접 마우스와 키보드를 움직이며 작업하는 모습을 지켜보세요. 완료 시 텔레그램으로 결과를 알려줍니다.</div>
+    </div>
+  </div>
+</section>
+
+<section class="pricing-section" id="pricing">
+  <div class="pricing-header">// Plans & Pricing</div>
+  <div class="pricing-grid">
+    <div class="plan">
+      <div class="plan-name">Free</div>
+      <div class="plan-price">$0<span>/mo</span></div>
+      <div class="plan-desc">Try OPERA AI risk-free</div>
+      <ul class="plan-feats">
+        <li>50 tasks/month</li>
+        <li>Basic PC automation</li>
+        <li>Telegram integration</li>
+        <li>Community support</li>
+      </ul>
+      <a href="#" class="plan-cta" onclick="alert('Coming soon!')">GET FREE →</a>
+    </div>
+    <div class="plan hot">
+      <div class="hot-badge">BEST SELLER</div>
+      <div class="plan-name">Pro</div>
+      <div class="plan-price">$29<span>/mo</span></div>
+      <div class="plan-desc">For professionals</div>
+      <ul class="plan-feats">
+        <li>Unlimited tasks</li>
+        <li>XG5000 automation</li>
+        <li>WOL remote control</li>
+        <li>Priority support</li>
+      </ul>
+      <a href="#" class="plan-cta" onclick="alert('Coming soon!')">SUBSCRIBE →</a>
+    </div>
+    <div class="plan">
+      <div class="plan-name">Enterprise</div>
+      <div class="plan-price">$79<span>/mo</span></div>
+      <div class="plan-desc">For teams & businesses</div>
+      <ul class="plan-feats">
+        <li>Everything in Pro</li>
+        <li>Multi-PC management</li>
+        <li>Custom automation scripts</li>
+        <li>Dedicated support</li>
+      </ul>
+      <a href="#" class="plan-cta" onclick="alert('Coming soon!')">CONTACT →</a>
+    </div>
+  </div>
+</section>
+
+<section class="cta-section" id="download">
+  <h2>당신의 PC에<br><em style="color:var(--accent);font-style:normal">AI 직원</em>을 고용하세요</h2>
+  <p>지금 다운로드하고 리치에게 첫 업무를 지시해보세요.</p>
+  <div style="display:flex;gap:16px;justify-content:center;flex-wrap:wrap">
+    <a href="#" class="btn-main" onclick="alert('Windows 버전 준비 중입니다.')">⬇ WINDOWS 다운로드</a>
+    <a href="#" class="btn-outline" onclick="alert('Mac 버전 준비 중입니다.')">⬇ MAC 다운로드</a>
+  </div>
+  <div style="margin-top:24px;font-size:12px;color:var(--muted)">Windows 10+ / macOS 12+ · 50MB · 1분 설치</div>
+</section>
+
+<footer>
+  <div>OPERA_AI © 2026</div>
+  <div><a href="/privacy">Privacy</a> · <a href="/terms">Terms</a> · <a href="https://workbotai.net">WORKBOT AI</a></div>
+</footer>
+</body>
+</html>
