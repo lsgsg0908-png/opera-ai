@@ -1,0 +1,8 @@
+__pycache__/
+*.pyc
+*.pyo
+agent/data/*.json
+agent/data/history/
+.DS_Store
+venv/
+.env
