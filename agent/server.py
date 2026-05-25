@@ -32,6 +32,7 @@ from core.payment import (
     get_plans, calculate_price, create_subscription,
     get_subscription, cancel_subscription, get_bulk_discount_tiers
 )
+from core.tg_bot import get_bot, COMMANDS
 from core.security import (
     check_request_safety, check_if_blocked, apply_strike,
     check_rate_limit, get_security_status, is_path_blocked
@@ -131,6 +132,31 @@ def api_subscription():
 def api_cancel():
     data = request.get_json() or {}
     return jsonify(cancel_subscription(data.get("id", "")))
+
+
+# ── API: 텔레그램 ──
+
+@app.route("/api/tg/config", methods=["GET", "POST"])
+def api_tg_config():
+    if request.method == "POST":
+        data = request.get_json() or {}
+        return jsonify(get_bot().configure(data.get("bot_token", ""), data.get("chat_id", "")))
+    from core.tg_bot import _load_config
+    cfg = _load_config()
+    return jsonify({"enabled": cfg.get("enabled", False), "commands": [
+        {"cmd": k, "desc": v} for k, v in COMMANDS.items()
+    ]})
+
+
+@app.route("/api/tg/send", methods=["POST"])
+def api_tg_send():
+    data = request.get_json() or {}
+    return jsonify(get_bot().send_message(data.get("text", "")))
+
+
+@app.route("/api/tg/start", methods=["POST"])
+def api_tg_start():
+    return jsonify(get_bot().start_polling())
 
 
 # ── API: 보안 ──
