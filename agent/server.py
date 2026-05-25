@@ -26,6 +26,8 @@ from core.executor import (
     system_info, clipboard_get, clipboard_set, ocr_image
 )
 from core.skill_manager import get_registry
+from core.task_queue import get_queue
+from core.scheduler import get_scheduler
 
 app = Flask(__name__)
 CORS(app)
@@ -268,6 +270,70 @@ def api_select_skills():
     cfg["skills"] = selected
     _save_config(cfg)
     return jsonify({"status": "ok", "skills": selected})
+
+
+# ── API: 작업 큐 ──
+
+@app.route("/api/tasks", methods=["GET"])
+def api_tasks():
+    queue = get_queue()
+    return jsonify(queue.get_status())
+
+
+@app.route("/api/tasks/enqueue", methods=["POST"])
+def api_enqueue():
+    data = request.get_json() or {}
+    queue = get_queue()
+    result = queue.enqueue(
+        action=data.get("action", ""),
+        params=data.get("params", {}),
+        priority=data.get("priority", "normal"),
+        description=data.get("description", "")
+    )
+    # 토큰 소비
+    est = estimate_tokens(len(json.dumps(data)))
+    consume_tokens(est)
+    result["tokens_used"] = est
+    return jsonify(result)
+
+
+@app.route("/api/tasks/history", methods=["GET"])
+def api_task_history():
+    queue = get_queue()
+    return jsonify({"tasks": queue.get_history(50)})
+
+
+# ── API: 루틴 ──
+
+@app.route("/api/routines", methods=["GET"])
+def api_routines():
+    sched = get_scheduler()
+    config = _load_config()
+    return jsonify({
+        "routines": sched.get_routines(),
+        "limit": sched.get_limit(config.get("plan", "trial"))
+    })
+
+
+@app.route("/api/routines/add", methods=["POST"])
+def api_add_routine():
+    data = request.get_json() or {}
+    config = _load_config()
+    sched = get_scheduler()
+    result = sched.add_routine(
+        name=data.get("name", "루틴"),
+        steps=data.get("steps", []),
+        interval_minutes=data.get("interval_minutes", 60),
+        plan=config.get("plan", "trial")
+    )
+    return jsonify(result)
+
+
+@app.route("/api/routines/remove", methods=["POST"])
+def api_remove_routine():
+    data = request.get_json() or {}
+    sched = get_scheduler()
+    return jsonify(sched.remove_routine(data.get("id", "")))
 
 
 # ── API: 히스토리 ──
