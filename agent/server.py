@@ -28,6 +28,10 @@ from core.executor import (
 from core.skill_manager import get_registry
 from core.task_queue import get_queue
 from core.scheduler import get_scheduler
+from core.payment import (
+    get_plans, calculate_price, create_subscription,
+    get_subscription, cancel_subscription, get_bulk_discount_tiers
+)
 from core.security import (
     check_request_safety, check_if_blocked, apply_strike,
     check_rate_limit, get_security_status, is_path_blocked
@@ -84,6 +88,49 @@ def _log_history(user_id, action, detail, tokens_used=0):
     log_file = HISTORY_DIR / f"{today}.jsonl"
     with open(log_file, "a") as f:
         f.write(json.dumps(entry, ensure_ascii=False) + "\n")
+
+
+# ── API: 결제 ──
+
+@app.route("/api/plans", methods=["GET"])
+def api_plans():
+    return jsonify({"plans": get_plans(), "bulk": get_bulk_discount_tiers()})
+
+
+@app.route("/api/price", methods=["POST"])
+def api_price():
+    data = request.get_json() or {}
+    result = calculate_price(
+        plan_id=data.get("plan", "basic"),
+        billing=data.get("billing", "monthly"),
+        quantity=data.get("quantity", 1),
+        bulk=data.get("bulk", False)
+    )
+    return jsonify(result or {"error": "Invalid plan"})
+
+
+@app.route("/api/subscribe", methods=["POST"])
+def api_subscribe():
+    data = request.get_json() or {}
+    result = create_subscription(
+        plan_id=data.get("plan", "basic"),
+        billing=data.get("billing", "monthly"),
+        quantity=data.get("quantity", 1),
+        user_id=data.get("user_id", "local")
+    )
+    return jsonify(result)
+
+
+@app.route("/api/subscription", methods=["GET"])
+def api_subscription():
+    sub = get_subscription()
+    return jsonify(sub or {"status": "no_active_subscription"})
+
+
+@app.route("/api/subscription/cancel", methods=["POST"])
+def api_cancel():
+    data = request.get_json() or {}
+    return jsonify(cancel_subscription(data.get("id", "")))
 
 
 # ── API: 보안 ──
