@@ -3,8 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>OPERA AI — PC에서 직접 일하는 AI 직원</title>
-<meta name="description" content="OPERA AI - PC에 설치하는 AI 직원. XG5000, 화물 프로그램, 문서 작업 자동화. 리치가 직접 마우스와 키보드를 움직입니다.">
+<title>OPERA AI — PC에서 직접 일하는 AI 비서</title>
+<meta name="description" content="OPERA AI - PC에 설치하는 AI 비서. 보고서 작성, 데이터 분석, 이메일, 번역, 웹 검색, 문서 정리까지 PC에서 하는 모든 일을 AI가 대신합니다.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
@@ -38,6 +38,8 @@ h1 em{font-style:normal;color:var(--accent)}
 .hero-demo::before{content:'>_';color:var(--accent)}
 .demo-cursor{display:inline-block;width:8px;height:16px;background:var(--accent);animation:blink 1s infinite;margin-left:4px;vertical-align:middle}
 @keyframes blink{0%,100%{opacity:1}50%{opacity:0}}
+.section-title{font-family:'Space Mono',monospace;font-size:11px;letter-spacing:3px;color:var(--accent);margin-bottom:16px;text-transform:uppercase}
+.h2-title{font-size:clamp(28px,3vw,44px);font-weight:700;margin-bottom:40px}
 
 /* Features */
 .features-section{border-bottom:1px solid var(--border)}
@@ -47,11 +49,20 @@ h1 em{font-style:normal;color:var(--accent)}
 .feature-icon{font-size:32px;margin-bottom:24px;display:block}
 .feature-title{font-size:18px;font-weight:500;margin-bottom:16px}
 .feature-desc{font-size:14px;color:var(--muted);line-height:1.8}
+.feature-example{font-size:12px;color:var(--accent);margin-top:16px;font-family:'Space Mono',monospace}
+
+/* Use Cases */
+.usecases-section{padding:80px 60px;border-bottom:1px solid var(--border);background:var(--gray)}
+.usecase-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:20px;margin-top:40px}
+.usecase{padding:32px;background:var(--black);border:1px solid var(--border);transition:border-color .2s}
+.usecase:hover{border-color:var(--accent)}
+.usecase-icon{font-size:28px;margin-bottom:16px;display:block}
+.usecase h3{font-size:16px;font-weight:500;margin-bottom:12px}
+.usecase p{font-size:12px;color:var(--muted);line-height:1.7;margin-bottom:8px}
+.usecase .tag{display:inline-block;font-size:9px;font-family:'Space Mono',monospace;padding:3px 8px;background:var(--gray2);color:var(--muted);margin-right:4px;margin-top:4px}
 
 /* Skills Preview */
 .skills-section{padding:80px 60px;border-bottom:1px solid var(--border)}
-.skill-header{font-family:'Space Mono',monospace;font-size:11px;letter-spacing:3px;color:var(--accent);margin-bottom:16px;text-transform:uppercase}
-.skill-title{font-size:clamp(24px,3vw,40px);font-weight:700;margin-bottom:40px}
 .skills-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:1px;background:var(--border);border:1px solid var(--border)}
 .skill-item{padding:24px;background:var(--black);display:flex;flex-direction:column;gap:8px;transition:background .2s}
 .skill-item:hover{background:var(--gray)}
@@ -59,9 +70,8 @@ h1 em{font-style:normal;color:var(--accent)}
 .skill-name{font-size:13px;font-weight:500;color:var(--white)}
 .skill-desc{font-size:11px;color:var(--muted);line-height:1.5}
 
-/* Token System */
-.token-section{padding:80px 60px;border-bottom:1px solid var(--border);background:var(--gray)}
-.token-header{font-family:'Space Mono',monospace;font-size:11px;letter-spacing:3px;color:var(--accent);margin-bottom:16px;text-transform:uppercase}
+/* Token */
+.token-section{padding:80px 60px;border-bottom:1px solid var(--border)}
 .token-grid{display:grid;grid-template-columns:1fr 1fr;gap:48px;margin-top:40px}
 .token-info h3{font-size:20px;font-weight:500;margin-bottom:20px}
 .token-info p{font-size:14px;color:var(--muted);line-height:1.8;margin-bottom:16px}
@@ -73,7 +83,6 @@ h1 em{font-style:normal;color:var(--accent)}
 
 /* How It Works */
 .how-section{border-bottom:1px solid var(--border);padding:80px 60px}
-.how-header{font-family:'Space Mono',monospace;font-size:11px;letter-spacing:3px;color:var(--accent);margin-bottom:48px;text-transform:uppercase}
 .how-steps{display:grid;grid-template-columns:repeat(3,1fr);gap:48px}
 .step{padding:32px;border:1px solid var(--border);background:var(--gray)}
 .step-n{font-family:'Space Mono',monospace;font-size:32px;font-weight:700;color:var(--accent);margin-bottom:16px}
@@ -82,7 +91,6 @@ h1 em{font-style:normal;color:var(--accent)}
 
 /* Pricing */
 .pricing-section{padding:80px 60px;border-bottom:1px solid var(--border)}
-.pricing-header{font-family:'Space Mono',monospace;font-size:11px;letter-spacing:3px;color:var(--accent);margin-bottom:48px;text-transform:uppercase}
 .pricing-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:var(--border);border:1px solid var(--border)}
 .plan{padding:48px 40px;background:var(--black)}
 .plan.hot{background:var(--gray);border:1px solid var(--accent);position:relative}
@@ -96,10 +104,7 @@ h1 em{font-style:normal;color:var(--accent)}
 .plan-cta{display:block;font-family:'Space Mono',monospace;font-size:11px;font-weight:700;letter-spacing:1px;text-align:center;padding:14px;background:var(--accent);color:var(--black);cursor:pointer;transition:opacity .2s}
 .plan-cta:hover{opacity:.85}
 .hot-badge{position:absolute;top:12px;right:12px;font-family:'Space Mono',monospace;font-size:9px;letter-spacing:1px;background:var(--accent);color:var(--black);padding:4px 10px}
-
-/* Comparison Table */
 .comp-section{padding:40px 60px 80px;border-bottom:1px solid var(--border)}
-.comp-header{font-family:'Space Mono',monospace;font-size:10px;letter-spacing:2px;color:var(--muted);margin-bottom:24px;text-transform:uppercase;text-align:center}
 .comp-table{width:100%;border-collapse:collapse;font-size:12px}
 .comp-table th,.comp-table td{padding:10px 16px;text-align:center;border-bottom:1px solid var(--border)}
 .comp-table th{font-family:'Space Mono',monospace;font-size:9px;letter-spacing:1px;color:var(--accent);background:var(--gray);text-transform:uppercase}
@@ -111,7 +116,6 @@ h1 em{font-style:normal;color:var(--accent)}
 
 /* FAQ */
 .faq-section{padding:80px 60px;border-bottom:1px solid var(--border)}
-.faq-header{font-family:'Space Mono',monospace;font-size:11px;letter-spacing:3px;color:var(--accent);margin-bottom:48px;text-transform:uppercase}
 .faq-list{max-width:800px;margin:0 auto;display:grid;gap:4px}
 .faq-q{padding:20px 24px;background:var(--gray);border:1px solid var(--border);cursor:pointer;display:flex;justify-content:space-between;align-items:center;font-size:14px;font-weight:500;transition:background .2s;user-select:none}
 .faq-q:hover{background:var(--gray2)}
@@ -124,8 +128,6 @@ h1 em{font-style:normal;color:var(--accent)}
 .cta-section{padding:120px 60px;text-align:center;background:linear-gradient(180deg,var(--black),var(--gray))}
 .cta-section h2{font-size:clamp(32px,4vw,56px);font-weight:700;letter-spacing:-2px;margin-bottom:24px}
 .cta-section p{color:var(--muted);margin-bottom:40px;font-size:16px}
-
-/* Footer */
 footer{padding:40px 60px;border-top:1px solid var(--border);display:flex;justify-content:space-between;font-size:12px;color:var(--muted);font-family:'Space Mono',monospace}
 footer a{color:var(--muted);transition:color .2s}
 footer a:hover{color:var(--white)}
@@ -157,11 +159,11 @@ footer a:hover{color:var(--white)}
 @media(max-width:768px){
   .hero{grid-template-columns:1fr}
   .hero-left,.hero-right{padding:100px 24px 60px}
-  .features-grid,.skills-grid{grid-template-columns:1fr}
+  .features-grid,.skills-grid,.usecase-grid{grid-template-columns:1fr}
   .feature{padding:40px 24px;border-right:none;border-bottom:1px solid var(--border)}
   .how-steps,.token-grid{grid-template-columns:1fr}
   .pricing-grid{grid-template-columns:1fr}
-  .skills-section,.pricing-section,.comp-section,.how-section,.faq-section,.token-section,.cta-section{padding:60px 24px}
+  .skills-section,.pricing-section,.comp-section,.how-section,.faq-section,.token-section,.cta-section,.usecases-section{padding:60px 24px}
   footer{flex-direction:column;gap:12px;padding:24px}
 }
 </style>
@@ -172,33 +174,32 @@ footer a:hover{color:var(--white)}
   <a href="/" class="logo">OPERA<span>_AI</span></a>
   <div class="nav-right">
     <a href="#features" class="nav-link">Features</a>
-    <a href="#skills" class="nav-link">Skills</a>
+    <a href="#usecases" class="nav-link">Use Cases</a>
     <a href="#pricing" class="nav-link">Pricing</a>
     <a href="#faq" class="nav-link">FAQ</a>
-    <a href="#" class="nav-link" onclick="showAuth()">Dashboard</a>
+    <a href="/dashboard" class="nav-link">Dashboard</a>
     <a href="/download" class="nav-cta">DOWNLOAD →</a>
   </div>
 </nav>
 
 <section class="hero" id="top">
   <div class="hero-left">
-    <div class="hero-tag">// PC Local AI Agent</div>
-    <h1>PC에서 직접<br>일하는 AI, <em>리치</em></h1>
-    <p class="sub">마우스와 키보드를 직접 움직이며 XG5000, 화물 프로그램, 문서 작업을 대신합니다. 당신의 PC가 AI 직원을 얻습니다.</p>
+    <div class="hero-tag">// Your PC's AI Assistant</div>
+    <h1>PC에서 직접 일하는<br>AI 비서, <em>리치</em></h1>
+    <p class="sub">설치만 하면 끝. 보고서 작성, 데이터 정리, 이메일 발송, 번역, 검색 — PC에서 하는 모든 반복 업무를 리치에게 맡기세요.</p>
     <div class="hero-actions">
       <a href="#" class="btn-main" onclick="showAuth('download')">3일 무료 체험 →</a>
-      <a href="#features" class="btn-outline">LEARN MORE</a>
+      <a href="#features" class="btn-outline">더 알아보기</a>
     </div>
   </div>
   <div class="hero-right">
     <div class="hero-demo">
-      리치야, XG5000 열고 탱크 제어 프로그램 만들어줘<br>
-      <span style="color:var(--accent)">→</span> XG5000 실행 중...<br>
-      <span style="color:var(--accent)">→</span> 새 프로젝트 생성 (XGK)<br>
-      <span style="color:var(--accent)">→</span> 래더 프로그램 작성 중...<br>
-      <span style="color:var(--accent)">→</span> 변수/설명문 등록 완료<br>
-      <span style="color:var(--accent)">→</span> PLC 쓰기 → RUN 전환 ✅<br>
-      <span style="color:var(--green)">✅ TANK_CTRL 공정 구현 완료!</span><span class="demo-cursor"></span>
+      리치야, 이번 분기 판매 데이터 엑셀에서 찾아서 보고서로 만들어줘<br>
+      <span style="color:var(--accent)">→</span> 엑셀 파일 검색 중... 열기<br>
+      <span style="color:var(--accent)">→</span> 데이터 분석 중 (1,245행 × 12열)<br>
+      <span style="color:var(--accent)">→</span> 보고서 작성: 매출 추이, 지역별 현황, 전년대비<br>
+      <span style="color:var(--accent)">→</span> PDF로 저장 → 메일로 발송 ✅<br>
+      <span style="color:var(--green)">✅ 분기 보고서 작성 완료! 메일로 보냈습니다.</span><span class="demo-cursor"></span>
     </div>
   </div>
 </section>
@@ -207,27 +208,74 @@ footer a:hover{color:var(--white)}
 <section class="features-section" id="features">
   <div class="features-grid">
     <div class="feature">
-      <span class="feature-icon">⚡</span>
-      <div class="feature-title">XG5000 완전 자동화</div>
-      <div class="feature-desc">래더 프로그램 작성부터 PLC 쓰기, 모니터링까지 XG5000의 모든 기능을 AI가 직접 제어합니다. 사람이 하는 것처럼 마우스와 키보드를 움직이며 작업합니다.</div>
+      <span class="feature-icon">📄</span>
+      <div class="feature-title">문서·보고서 자동화</div>
+      <div class="feature-desc">데이터 수집부터 분석, 보고서 작성, PDF 저장, 메일 발송까지 한 번에. 엑셀, 워드, 파워포인트 문서를 직접 다루며 작업합니다.</div>
+      <div class="feature-example">"이번 달 영업실적 분석해서 보고서로 만들어줘"</div>
     </div>
     <div class="feature">
-      <span class="feature-icon">📊</span>
-      <div class="feature-title">화물/데이터 수집</div>
-      <div class="feature-desc">원콜, 24시 등 화물 프로그램에 로그인하여 배차 현황, 미수금, 입금내역을 자동으로 수집하고 정리합니다. 오늘/이번주/이번달 통계를 TG로 받아보세요.</div>
+      <span class="feature-icon">🌐</span>
+      <div class="feature-title">웹 검색·정보 수집</div>
+      <div class="feature-desc">구글 검색, 뉴스, 주식 시세, 제품 정보, 논문 검색까지. 찾은 정보를 자동으로 요약하고 엑셀이나 문서로 정리합니다.</div>
+      <div class="feature-example">"AI 관련 최신 트렌드 5개 요약해줘"</div>
     </div>
     <div class="feature">
-      <span class="feature-icon">🖥️</span>
-      <div class="feature-title">PC 전권 위임</div>
-      <div class="feature-desc">앱 실행, 파일 관리, 웹 서핑, 데이터 정리까지 PC에서 할 수 있는 모든 일을 리치에게 맡기세요. 텔레그램으로 명령하고 결과를 받아보세요.</div>
+      <span class="feature-icon">📧</span>
+      <div class="feature-title">이메일·메시지 발송</div>
+      <div class="feature-desc">내용 작성, 첨부파일 포함, 다수 발송, 예약 발송까지. 비즈니스 메일, 안내문, 정기 리포트를 자동으로 발송합니다.</div>
+      <div class="feature-example">"오늘까지 접수된 문의에 답장 보내줘"</div>
+    </div>
+  </div>
+</section>
+
+<!-- Use Cases -->
+<section class="usecases-section" id="usecases">
+  <div class="section-title">// Use Cases</div>
+  <div class="h2-title">누구나 쓸 수 있습니다</div>
+  <div class="usecase-grid">
+    <div class="usecase">
+      <span class="usecase-icon">👔</span>
+      <h3>직장인 / 사무직</h3>
+      <p>엑셀 데이터 정리, 보고서 작성, 이메일 발송, 회의록 요약, 문서 비교·검토. 매일 반복되는 오피스 업무를 자동화하세요.</p>
+      <span class="tag">엑셀</span><span class="tag">문서</span><span class="tag">메일</span>
+    </div>
+    <div class="usecase">
+      <span class="usecase-icon">🎓</span>
+      <h3>대학생 / 연구자</h3>
+      <p>논문 검색·요약, 레포트 작성, 데이터 분석, 통계 처리, 참고문헌 정리, 번역. 학업과 연구의 생산성을 높이세요.</p>
+      <span class="tag">번역</span><span class="tag">논문</span><span class="tag">통계</span>
+    </div>
+    <div class="usecase">
+      <span class="usecase-icon">💻</span>
+      <h3>개발자 / IT</h3>
+      <p>코드 생성·리뷰, 에러 로그 분석, API 문서 정리, 데이터베이스 쿼리, 배포 스크립트 작성. 개발 생산성을 2배로.</p>
+      <span class="tag">코딩</span><span class="tag">DB</span><span class="tag">자동화</span>
+    </div>
+    <div class="usecase">
+      <span class="usecase-icon">📈</span>
+      <h3>마케터 / MD</h3>
+      <p>경쟁사 모니터링, 시장 동향 리서치, 상품 정보 수집, SNS 게시물 작성, 데이터 시각화. 마케팅 인사이트를 빠르게.</p>
+      <span class="tag">리서치</span><span class="tag">모니터링</span><span class="tag">리포트</span>
+    </div>
+    <div class="usecase">
+      <span class="usecase-icon">🏪</span>
+      <h3>소상공인 / 자영업</h3>
+      <p>재고 정리, 매출 분석, 고객 관리, 공문·안내문 작성, 세금 자료 정리. 직원 한 명 고용하는 부담 없이 AI 비서를.</p>
+      <span class="tag">정산</span><span class="tag">고객관리</span><span class="tag">문서</span>
+    </div>
+    <div class="usecase">
+      <span class="usecase-icon">🏠</span>
+      <h3>일반 사용자</h3>
+      <p>일정 관리, 할 일 목록 정리, 쇼핑 정보 비교, 여행 계획, 개인 문서 정리. 집에서도 PC로 하는 모든 일을 도와줍니다.</p>
+      <span class="tag">일정</span><span class="tag">정리</span><span class="tag">정보</span>
     </div>
   </div>
 </section>
 
 <!-- Skills Preview -->
 <section class="skills-section" id="skills">
-  <div class="skill-header">// 20 Skills Included</div>
-  <div class="skill-title">리치가 할 수 있는 일</div>
+  <div class="section-title">// 20 Skills Included</div>
+  <div class="h2-title">리치가 할 수 있는 일</div>
   <div class="skills-grid">
     <div class="skill-item"><span class="skill-icon">📝</span><span class="skill-name">문서 작성·편집</span><span class="skill-desc">AI 텍스트 생성 → 자동 입력</span></div>
     <div class="skill-item"><span class="skill-icon">📊</span><span class="skill-name">엑셀 데이터 가공</span><span class="skill-desc">openpyxl로 데이터 처리</span></div>
@@ -254,147 +302,146 @@ footer a:hover{color:var(--white)}
 
 <!-- Token System -->
 <section class="token-section" id="tokens">
-  <div class="token-header">// Token System</div>
+  <div class="section-title">// Token System</div>
+  <div class="h2-title">합리적인 사용량 관리</div>
   <div class="token-grid">
     <div class="token-info">
-      <h3>토큰 기반 사용량 관리</h3>
-      <p>OPERA AI는 토큰 시스템으로 사용량을 관리합니다. 월 토큰을 일일로 분할 지급하여 합리적으로 사용할 수 있습니다.</p>
-      <p>• 매일 자동으로 일일 토큰 지급<br>
-      • 일일 한도 소진 시 추가 토큰 구매 가능<br>
-      • 추가 구매 토큰은 다음 달로 이월 가능<br>
-      • 플랜 업그레이드 시 더 많은 일일 토큰</p>
+      <h3>토큰 기반 과금</h3>
+      <p>모든 작업은 토큰을 소비합니다. 간단한 명령(문서 검색, 번역)은 적은 토큰, 복잡한 작업(데이터 분석, 보고서 생성)은 더 많은 토큰을 사용합니다.</p>
+      <p>• 🎁 <b>매일 자동 지급</b> — 월 토큰을 일일 단위로 분할<br>
+      • ⛔ <b>일일 한도 초과 차단</b> — 추가 토큰 구매로 해결<br>
+      • 🔄 <b>추가 구매 토큰 이월</b> — 다음 달로 자동 연장<br>
+      • 💳 <b>정량제 토큰팩</b> — 10K/$3, 50K/$14, 100K/$25, 500K/$110</p>
     </div>
     <div>
       <table class="token-table">
         <tr><th>플랜</th><th>월 토큰</th><th>일일 지급</th></tr>
-        <tr><td><b>Free</b></td><td>50,000</td><td>~1,667/일</td></tr>
+        <tr><td><b>Free</b></td><td>-</td><td>체험용 제한</td></tr>
         <tr><td><b>Basic</b></td><td>345,000</td><td>~11,500/일</td></tr>
         <tr><td><b>Pro</b></td><td>545,000</td><td>~18,167/일</td></tr>
         <tr><td><b>Enterprise</b></td><td>995,000</td><td>~33,167/일</td></tr>
       </table>
-      <div style="margin-top:16px;font-size:12px;color:var(--muted);line-height:1.6">
-        <b style="color:var(--white)">추가 토큰 구매:</b><br>
-        10,000 토큰 — $3 · 50,000 토큰 — $14<br>
-        100,000 토큰 — $25 · 500,000 토큰 — $110
-      </div>
     </div>
   </div>
 </section>
 
 <!-- How It Works -->
 <section class="how-section">
-  <div class="how-header">// How It Works</div>
+  <div class="section-title">// How It Works</div>
+  <div class="h2-title">3단계로 시작</div>
   <div class="how-steps">
     <div class="step">
       <div class="step-n">01</div>
       <div class="step-title">Download & Install</div>
-      <div class="step-desc">Windows 또는 Mac용 OPERA AI를 다운로드하여 설치합니다. 1분이면 완료됩니다.</div>
+      <div class="step-desc">Windows 또는 Mac용 OPERA AI를 다운로드하여 설치합니다. 1분이면 완료, 별도의 복잡한 설정이 필요 없습니다.</div>
     </div>
     <div class="step">
       <div class="step-n">02</div>
-      <div class="step-title">Connect Telegram</div>
-      <div class="step-desc">텔레그램으로 리치에게 명령을 내리세요. "XG5000 열어", "원콜 데이터 수집해", "엑셀 정리해"</div>
+      <div class="step-title">Connect & Command</div>
+      <div class="step-desc">PC에 설치된 리치에게 명령을 내리세요. "엑셀 정리해줘", "이메일 보내줘", "검색해줘" — 말하는 대로 작동합니다.</div>
     </div>
     <div class="step">
       <div class="step-n">03</div>
       <div class="step-title">Watch It Work</div>
-      <div class="step-desc">리치가 직접 마우스와 키보드를 움직이며 작업하는 모습을 지켜보세요. 완료 시 텔레그램으로 결과를 알려줍니다.</div>
+      <div class="step-desc">리치가 직접 마우스와 키보드를 움직이며 작업합니다. 완료 시 텔레그램이나 PC 알림으로 결과를 알려줍니다.</div>
     </div>
   </div>
 </section>
 
 <!-- Pricing -->
 <section class="pricing-section" id="pricing">
-  <div class="pricing-header">// Plans & Pricing</div>
+  <div class="section-title">// Plans & Pricing</div>
+  <div class="h2-title">맞춤형 요금제</div>
   <div class="pricing-grid">
     <div class="plan">
       <div class="plan-name">Free</div>
       <div class="plan-price">$0<span>/mo</span></div>
-      <div class="plan-desc">Try before you buy</div>
+      <div class="plan-desc">부담 없이 시작</div>
       <ul class="plan-feats">
-        <li>50,000 tokens/month</li>
-        <li>Basic PC automation</li>
-        <li>3 skills of 20</li>
-        <li>Telegram integration</li>
-        <li>Community support</li>
+        <li>제한된 토큰으로 체험</li>
+        <li>3개 스킬 선택 가능</li>
+        <li>기본 PC 자동화</li>
+        <li>텔레그램 연동</li>
+        <li>커뮤니티 지원</li>
       </ul>
       <a href="#" class="plan-cta" onclick="showAuth('register')">START FREE →</a>
     </div>
     <div class="plan hot">
       <div class="hot-badge">BEST SELLER</div>
-      <div class="plan-name">Pro</div>
-      <div class="plan-price">$29<span>/mo</span></div>
-      <div class="plan-desc">For professionals</div>
+      <div class="plan-name">Basic</div>
+      <div class="plan-price">$69<span>/mo</span></div>
+      <div class="plan-desc">합리적인 가격의 필수 플랜</div>
       <ul class="plan-feats">
-        <li>545,000 tokens/month</li>
-        <li>Unlimited tasks</li>
-        <li>10 skills of 20</li>
-        <li>XG5000 full automation</li>
-        <li>WOL remote control</li>
-        <li>Priority support</li>
+        <li>345,000 토큰/월</li>
+        <li>20개 스킬 중 3개 선택</li>
+        <li>동시 작업 1개</li>
+        <li>텔레그램 + PC 알림</li>
+        <li>이메일 지원</li>
       </ul>
-      <a href="#" class="plan-cta" style="background:var(--accent);color:var(--black);animation:glow 2s infinite" onclick="showAuth('subscribe')">💳 SUBSCRIBE →</a>
+      <a href="#" class="plan-cta" onclick="showAuth('subscribe')">SUBSCRIBE →</a>
     </div>
     <div class="plan">
-      <div class="plan-name">Enterprise</div>
-      <div class="plan-price">$79<span>/mo</span></div>
-      <div class="plan-desc">For teams & businesses</div>
+      <div class="plan-name">Pro</div>
+      <div class="plan-price">$109<span>/mo</span></div>
+      <div class="plan-desc">전문가를 위한 고성능</div>
       <ul class="plan-feats">
-        <li>995,000 tokens/month</li>
-        <li>All 20 skills</li>
-        <li>Multi-PC management</li>
-        <li>Custom automation scripts</li>
-        <li>Dedicated support</li>
+        <li>545,000 토큰/월</li>
+        <li>20개 스킬 중 10개 선택</li>
+        <li>동시 작업 3개</li>
+        <li>자동화 루틴 5개 등록</li>
+        <li>작업 히스토리 30일</li>
+        <li>우선 지원</li>
       </ul>
-      <a href="#" class="plan-cta" onclick="showAuth('contact')">CONTACT →</a>
+      <a href="#" class="plan-cta" style="background:var(--accent);color:var(--black)" onclick="showAuth('subscribe')">💳 SUBSCRIBE →</a>
     </div>
   </div>
 </section>
 
 <!-- Comparison Table -->
 <section class="comp-section">
-  <div class="comp-header">// Detailed Plan Comparison</div>
+  <div class="section-title" style="text-align:center;margin-bottom:24px">// 세부 비교</div>
   <table class="comp-table">
-    <tr><th>Feature</th><th>Free</th><th>Basic</th><th>Pro</th><th>Enterprise</th></tr>
+    <tr><th>기능</th><th>Free</th><th>Basic</th><th>Pro</th><th>Enterprise</th></tr>
     <tr><td>월 가격</td><td><b>$0</b></td><td><b>$69</b></td><td><b>$109</b></td><td><b>$199</b></td></tr>
     <tr><td>연 가격 (17% 할인)</td><td>$0</td><td>$690</td><td>$1,090</td><td>$1,990</td></tr>
-    <tr><td>월 토큰</td><td>50,000</td><td>345,000</td><td>545,000</td><td>995,000</td></tr>
+    <tr><td>월 토큰</td><td>체험용</td><td>345,000</td><td>545,000</td><td>995,000</td></tr>
     <tr><td>PC 설치 대수</td><td>1대</td><td>1대</td><td>1대</td><td>1대 + 추가 가능</td></tr>
     <tr><td>동시 작업</td><td>1개</td><td>1개</td><td class="y">✔ 3개</td><td class="y">✔ 10개</td></tr>
     <tr><td>자동화 루틴</td><td class="n">✘</td><td class="n">✘</td><td class="y">✔ 5개</td><td class="y">✔ 무제한</td></tr>
     <tr><td>작업 히스토리</td><td>7일</td><td>7일</td><td>30일</td><td>1년</td></tr>
-    <tr><td>기본 스킬</td><td>3개</td><td>3개 선택</td><td>10개 선택</td><td>전체 + 커스텀</td></tr>
+    <tr><td>선택 가능 스킬</td><td>3개</td><td>3개</td><td>10개</td><td>전체 + 커스텀</td></tr>
     <tr><td>외부 API 연동</td><td class="n">✘</td><td class="n">✘</td><td class="y">✔ 10종</td><td class="y">✔ 무제한</td></tr>
-    <tr><td>추가 토큰 구매</td><td class="y">✔</td><td class="y">✔</td><td class="y">✔</td><td class="y">✔</td></tr>
+    <tr><td>토큰 추가 구매</td><td class="y">✔</td><td class="y">✔</td><td class="y">✔</td><td class="y">✔</td></tr>
     <tr><td>3일 무료 체험</td><td class="y">✔</td><td class="y">✔</td><td class="y">✔</td><td class="y">✔</td></tr>
   </table>
 </section>
 
 <!-- FAQ -->
 <section class="faq-section" id="faq">
-  <div class="faq-header">// Frequently Asked Questions</div>
+  <div class="section-title">// FAQ</div>
+  <div class="h2-title">자주 묻는 질문</div>
   <div class="faq-list">
-    <div><div class="faq-q" onclick="toggleFaq(this)">OPERA AI는 어떻게 동작하나요?<span class="arrow">▼</span></div><div class="faq-a">OPERA AI (리치)는 고객님의 PC에 직접 설치되어 마우스와 키보드를 실제로 움직이며 작업을 수행합니다. 텔레그램으로 명령을 내리면 리치가 PC에서 직접 실행하고 결과를 알려줍니다.</div></div>
-    <div><div class="faq-q" onclick="toggleFaq(this)">설치가 어렵나요?<span class="arrow">▼</span></div><div class="faq-a">1분이면 설치 완료됩니다. Windows나 Mac에서 설치 파일을 다운로드하여 실행하기만 하면 됩니다. 별도의 복잡한 설정이 필요하지 않습니다.</div></div>
-    <div><div class="faq-q" onclick="toggleFaq(this)">어떤 PC에서 사용할 수 있나요?<span class="arrow">▼</span></div><div class="faq-a">Windows 10/11 및 macOS 12+ (Intel 및 Apple Silicon)를 지원합니다. 최소 4GB RAM, 500MB 여유 공간이 필요합니다.</div></div>
-    <div><div class="faq-q" onclick="toggleFaq(this)">토큰은 어떻게 계산되나요?<span class="arrow">▼</span></div><div class="faq-a">모든 작업은 토큰을 소비합니다. 간단한 명령은 적은 토큰, 복잡한 분석 작업은 더 많은 토큰을 사용합니다. 일일 토큰은 매일 자동으로 지급되며, 추가 토큰을 구매할 수 있습니다.</div></div>
-    <div><div class="faq-q" onclick="toggleFaq(this)">무료 체험은 어떻게 하나요?<span class="arrow">▼</span></div><div class="faq-a">카드 등록 후 3일간 무료로 모든 Pro 기능을 체험할 수 있습니다. 3일 이내에 취소하면 요금이 청구되지 않습니다.</div></div>
-    <div><div class="faq-q" onclick="toggleFaq(this)">PC가 꺼져있을 때는 어떻게 하나요?<span class="arrow">▼</span></div><div class="faq-a">Pro 플랜 이상에서 WOL(Wake-on-LAN)을 지원합니다. 텔레그램으로 PC를 원격으로 켜고 작업을 지시할 수 있습니다. 작업 완료 후 자동으로 PC를 종료할 수도 있습니다.</div></div>
-    <div><div class="faq-q" onclick="toggleFaq(this)">보안은 안전한가요?<span class="arrow">▼</span></div><div class="faq-a">3중 방어 체계로 보호됩니다. Layer 1: 실행 명령어 블랙리스트 (rm -rf 등 차단), Layer 2: AI가 위험 요청 자동 판단 및 경고, Layer 3: 반복 위반 시 계정 정지. 모든 작업 로그가 저장되어 추적 가능합니다.</div></div>
-    <div><div class="faq-q" onclick="toggleFaq(this)">결제는 어떻게 하나요?<span class="arrow">▼</span></div><div class="faq-a">신용카드 (Visa, Mastercard), PayPal, 토스페이먼츠, 카카오페이를 지원합니다. 모든 결제는 3D Secure로 보호됩니다. 연간 결제 시 17% 할인 혜택이 있습니다.</div></div>
+    <div><div class="faq-q" onclick="toggleFaq(this)">OPERA AI는 어떻게 동작하나요?<span class="arrow">▼</span></div><div class="faq-a">OPERA AI(리치)는 고객님의 PC에 직접 설치되는 AI 비서입니다. 사람이 마우스와 키보드로 하는 모든 작업을 리치가 대신합니다. 텔레그램이나 PC 창으로 명령을 내리면 리치가 직접 실행하고 결과를 알려줍니다. 별도의 복잡한 서버나 클라우드 설정이 필요 없습니다.</div></div>
+    <div><div class="faq-q" onclick="toggleFaq(this)">설치가 어렵나요?<span class="arrow">▼</span></div><div class="faq-a">1분이면 설치 완료됩니다. 설치 파일을 다운로드하여 실행하기만 하면 됩니다. 추가 설정, 회원가입, 복잡한 환경 구성이 필요하지 않습니다.</div></div>
+    <div><div class="faq-q" onclick="toggleFaq(this)">어떤 PC에서 사용할 수 있나요?<span class="arrow">▼</span></div><div class="faq-a">Windows 10/11 및 macOS 12+(Intel 및 Apple Silicon)를 지원합니다. 최소 4GB RAM, 500MB 여유 공간, 인터넷 연결이 필요합니다.</div></div>
+    <div><div class="faq-q" onclick="toggleFaq(this)">리치가 실제로 마우스와 키보드를 움직이나요?<span class="arrow">▼</span></div><div class="faq-a">네, 리치는 실제로 마우스 커서를 움직이고 키보드로 입력합니다. 프로그램 실행, 파일 열기, 웹 브라우징, 문서 작성 등 사람이 하는 모든 조작을 그대로 수행합니다. 작업하는 모습을 직접 지켜볼 수 있습니다.</div></div>
+    <div><div class="faq-q" onclick="toggleFaq(this)">토큰은 어떻게 계산되나요?<span class="arrow">▼</span></div><div class="faq-a">모든 작업은 토큰을 소비합니다. 간단한 명령(문서 검색, 번역)은 10~50토큰, 중간 작업(데이터 분석, 보고서 요약)은 100~300토큰, 복잡한 작업(대용량 데이터 처리, 코드 생성)은 500~2000토큰이 소비됩니다. 일일 토큰은 매일 자동으로 지급되며, 추가 토큰을 구매할 수 있습니다.</div></div>
+    <div><div class="faq-q" onclick="toggleFaq(this)">무료 체험은 어떻게 하나요?<span class="arrow">▼</span></div><div class="faq-a">이메일과 비밀번호만으로 3일간 Pro 기능을 무료로 체험할 수 있습니다. 3일 이내에 취소하면 요금이 청구되지 않습니다. 별도의 결제 정보 입력이 필요하지 않습니다.</div></div>
+    <div><div class="faq-q" onclick="toggleFaq(this)">보안은 안전한가요?<span class="arrow">▼</span></div><div class="faq-a">3중 방어 체계로 보호됩니다. Layer 1: 시스템 명령어/경로 블랙리스트로 위험한 명령 차단, Layer 2: AI가 위험 요청 자동 판단, Layer 3: 반복 위반 시 계정 정지. 모든 작업 로그가 저장되어 추적 가능합니다.</div></div>
+    <div><div class="faq-q" onclick="toggleFaq(this)">결제는 어떻게 하나요?<span class="arrow">▼</span></div><div class="faq-a">PayPal을 지원합니다. 신용카드(Visa, Mastercard, American Express) 및 PayPal 잔액으로 결제 가능합니다. 연간 결제 시 17% 할인 혜택이 있으며, 추가 PC 등록 시 50% 추가 토큰이 지급됩니다.</div></div>
   </div>
 </section>
 
 <!-- CTA -->
-<section class="cta-section" id="download">
-  <h2>당신의 PC에<br><em style="color:var(--accent);font-style:normal">AI 직원</em>을 고용하세요</h2>
-  <p>지금 가입하고 3일 무료 체험으로 리치에게 첫 업무를 지시해보세요.<br>카드 등록만 하면 바로 시작할 수 있습니다.</p>
+<section class="cta-section" id="cta">
+  <h2>지금 바로<br><em style="color:var(--accent);font-style:normal">AI 비서</em>를 시작하세요</h2>
+  <p>3일 무료 체험으로 리치의 능력을 직접 확인해보세요.<br>설치 1분, 명령 한 번이면 업무가 자동으로 처리됩니다.</p>
   <div style="display:flex;gap:16px;justify-content:center;flex-wrap:wrap">
     <a href="#" class="btn-main" onclick="showAuth('register')">3일 무료 체험 시작 →</a>
     <a href="#" class="btn-outline" onclick="showAuth('login')">기존 회원 로그인</a>
   </div>
   <div style="margin-top:24px;font-size:12px;color:var(--muted)">
-    Windows 10+ / macOS 12+ · 50MB · 1분 설치 · 카드 등록으로 3일 무료
+    Windows 10+ / macOS 12+ · 50MB · 1분 설치 · 3일 무료 체험
   </div>
 </section>
 
@@ -419,14 +466,12 @@ footer a:hover{color:var(--white)}
 </div>
 
 <script>
-// FAQ Toggle
 function toggleFaq(el) {
   el.classList.toggle('active');
   var answer = el.nextElementSibling;
   answer.classList.toggle('open');
 }
 
-// Auth Modal
 function showAuth(mode) {
   document.getElementById('authModal').classList.add('show');
   var content = document.getElementById('authContent');
@@ -450,8 +495,8 @@ function showAuth(mode) {
       '<div class="modal-plan" onclick="selectPlan(this,\'enterprise\')"><div><div class="modal-pname">Enterprise</div><div style="font-size:11px;color:var(--muted)">995,000 tokens/mo</div></div><div class="modal-pprice">$199/mo</div></div>' +
       '<div style="margin-top:16px"><label class="modal-field" style="display:block;font-size:11px;font-family:\'Space Mono\',monospace;color:var(--muted);margin-bottom:8px;text-transform:uppercase;letter-spacing:1px">Billing</label>' +
       '<div style="display:flex;gap:8px">' +
-      '<div class="modal-plan" style="flex:1" onclick="selectBilling(this,\'monthly\')"><div style="text-align:center"><div class="modal-pname">Monthly</div><div style="font-size:11px;color:var(--muted)">No discount</div></div></div>' +
-      '<div class="modal-plan selected" style="flex:1" onclick="selectBilling(this,\'yearly\')"><div style="text-align:center"><div class="modal-pname">Yearly</div><div style="font-size:11px;color:var(--accent)">-17% OFF</div></div></div>' +
+      '<div class="modal-plan" style="flex:1" onclick="selectBilling(this,\'monthly\')"><div style="text-align:center"><div class="modal-pname">Monthly</div></div></div>' +
+      '<div class="modal-plan selected" style="flex:1" onclick="selectBilling(this,\'yearly\')"><div style="text-align:center"><div class="modal-pname">Yearly</div><div style="font-size:11px;color:var(--accent)">-17%</div></div></div>' +
       '</div></div>' +
       '<button class="modal-btn" id="paypalBtn" onclick="paypalSubscribe()">💳 PAY WITH PAYPAL →</button>' +
       '<div id="paypalLoading" style="display:none;text-align:center;padding:20px;color:var(--muted);font-size:13px">⏳ Connecting to PayPal...</div>' +
@@ -462,7 +507,6 @@ function showAuth(mode) {
     content.innerHTML = '<h2>Enterprise Contact</h2><p>기업 고객 문의는 아래 연락처로 부탁드립니다.</p>' +
       '<div style="padding:20px 0;color:var(--muted);line-height:2;font-size:14px">' +
       '📧 enterprise@operaai.net<br>' +
-      '📞 Contact via Telegram<br>' +
       '💬 <a href="https://workbotai.net" style="color:var(--accent)" target="_blank">WORKBOT AI</a></div>';
   }
 }
@@ -517,7 +561,6 @@ async function paypalSubscribe() {
   }
 }
 
-// API Calls
 async function login() {
   var email = document.getElementById('loginEmail')?.value;
   var pass = document.getElementById('loginPass')?.value;
