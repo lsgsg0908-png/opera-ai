@@ -78,8 +78,40 @@ def _verify_token(token):
         return None
 
 
+def _validate_password(password):
+    """비밀번호 정책 검증"""
+    errors = []
+    if len(password) < 8:
+        errors.append("최소 8자 이상")
+    if len(password) > 128:
+        errors.append("최대 128자 이하")
+    if not any(c.isupper() for c in password):
+        errors.append("대문자 포함")
+    if not any(c.islower() for c in password):
+        errors.append("소문자 포함")
+    if not any(c.isdigit() for c in password):
+        errors.append("숫자 포함")
+    return errors
+
+
+def _validate_email(email):
+    """이메일 형식 검증"""
+    import re
+    pattern = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
+    return bool(re.match(pattern, email))
+
+
 def register(email, password, username=""):
     """회원가입"""
+    # 입력 검증
+    if not email or not password:
+        return {"error": "이메일과 비밀번호를 입력해주세요"}
+    if not _validate_email(email):
+        return {"error": "올바른 이메일 형식이 아닙니다"}
+    pw_errors = _validate_password(password)
+    if pw_errors:
+        return {"error": "비밀번호 정책 위반: " + ", ".join(pw_errors)}
+    
     data = _load_users()
     if any(u["email"] == email for u in data["users"]):
         return {"error": "이미 등록된 이메일입니다"}

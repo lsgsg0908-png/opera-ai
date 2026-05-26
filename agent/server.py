@@ -3,7 +3,8 @@
 OPERA AI — Main Server
 실행: python3 server.py
 """
-import os, sys, json, datetime, hashlib, hmac, threading, time
+import os, sys, json, datetime, hashlib, hmac, threading, time, re
+import secrets as _secrets
 from pathlib import Path
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -61,6 +62,39 @@ HISTORY_DIR.mkdir(exist_ok=True)
 
 # ── 보안 미들웨어 ──
 
+# CSRF: POST 요청은 반드시 Origin/Referer 검증
+_CSRF_EXEMPT = {"/api/deepseek/chat", "/api/paypal/webhook"}
+
+@app.before_request
+def csrf_check():
+    """CSRF 보호 — POST 요청 Origin/Referer 검증 (webhook 제외)"""
+    if request.method != "POST":
+        return None
+    if request.path in _CSRF_EXEMPT or request.path.startswith("/api/agent/"):
+        return None
+    if request.path.startswith("/api/auth/"):
+        return None  # auth는 Origin 다양함
+    
+    origin = request.headers.get("Origin", "")
+    referer = request.headers.get("Referer", "")
+    
+    # 둘 다 없으면 차단
+    if not origin and not referer:
+        return jsonify({"error": "CSRF: Origin/Referer required"}), 403
+    
+    # 허용된 출처 목록
+    allowed = ["http://localhost:5000", "http://127.0.0.1:5000",
+               "https://opera.workbotai.net", "https://lsgsg0908-png.github.io"]
+    
+    for h in [origin, referer]:
+        if h:
+            host = h.split("//")[-1].split("/")[0]
+            if not any(a in host for a in ["localhost", "127.0.0.1", "opera.workbotai.net",
+                                             "lsgsg0908-png.github.io", "operaai.net"]):
+                return jsonify({"error": "CSRF: Invalid origin"}), 403
+    return None
+
+
 # 제한된 경로 (인증 필요)
 PROTECTED_PATHS = [
     "/api/tokens/purchase", "/api/subscribe", "/api/me", "/api/config",
@@ -77,6 +111,24 @@ RATE_LIMITS = {
 
 # 전역 Rate Limit 저장소
 _rate_store = {}
+
+
+@app.before_request
+def input_sanitize():
+    """입력값 검증 — JSON 요청 필드 sanitize"""
+    if request.content_type == "application/json":
+        try:
+            data = request.get_json(silent=True) or {}
+            for key, val in list(data.items()):
+                if isinstance(val, str):
+                    # null byte 제거
+                    data[key] = val.replace("\x00", "")
+                    # 스크립트 태그 strip (XSS 방어)
+                    data[key] = data[key][:5000]  # 최대 길이
+            request._cached_json = (data, data)
+        except:
+            pass
+    return None
 
 
 @app.before_request
@@ -592,11 +644,8 @@ def api_deepseek_proxy():
         _log_history("ds_proxy_error", err[:100], {}, 0)
         return jsonify({"error": err}), 502
     
-    # 토큰 추적
-    from core.token_manager import consume_tokens, get_actual_cost
-    cost = get_actual_cost(tokens)
-    consume_tokens(tokens)
-    _log_history("ds_proxy", prompt[:100], {"tokens": tokens, "cost": cost}, tokens)
+    # 토큰 추적 (공통 함수)
+    cost = _deduct_and_log(prompt, tokens, len(content), "ds_proxy")
     
     # 작업 명령 파싱
     commands = _parse_ai_commands(content, prompt)
@@ -622,11 +671,8 @@ def _ai_process(prompt, mode="fast"):
         _log_history("ai_error", err[:100], {}, 0)
         return {"status": "error", "error": f"AI 오류: {err}"}
     
-    from core.token_manager import consume_tokens, get_actual_cost
-    cost = get_actual_cost(tokens)
-    consume_tokens(tokens)
+    cost = _deduct_and_log(prompt, tokens, len(content), "ai_chat")
     commands = _parse_ai_commands(content, prompt)
-    _log_history("ai_chat", prompt[:100], {"tokens": tokens, "cost": cost}, tokens)
     
     return {
         "status": "ok",
@@ -785,6 +831,21 @@ def api_remove_routine():
     data = request.get_json() or {}
     sched = get_scheduler()
     return jsonify(sched.remove_routine(data.get("id", "")))
+
+
+# ── 토큰 처리 공통 함수 (중복 제거) ──
+
+def _deduct_and_log(prompt, tokens, response_len, source="ai_chat"):
+    """토큰 차감 + 히스토리 기록 (단일 진입점)"""
+    from core.token_manager import consume_tokens, get_actual_cost
+    cost = get_actual_cost(tokens)
+    consume_tokens(tokens)
+    _log_history(source, str(prompt)[:100], {
+        "response_len": response_len,
+        "tokens": tokens,
+        "cost": cost,
+    }, tokens)
+    return cost
 
 
 # ── API: 히스토리 ──
