@@ -32,6 +32,7 @@ from core.payment import (
     get_plans, calculate_price, create_subscription,
     get_subscription, cancel_subscription, get_bulk_discount_tiers
 )
+from core.user_manager import register, login, authenticate, get_user
 from core.tg_bot import get_bot, COMMANDS
 from core.security import (
     check_request_safety, check_if_blocked, apply_strike,
@@ -89,6 +90,34 @@ def _log_history(user_id, action, detail, tokens_used=0):
     log_file = HISTORY_DIR / f"{today}.jsonl"
     with open(log_file, "a") as f:
         f.write(json.dumps(entry, ensure_ascii=False) + "\n")
+
+
+# ── API: 사용자 ──
+
+@app.route("/api/auth/register", methods=["POST"])
+def api_register():
+    data = request.get_json() or {}
+    result = register(
+        email=data.get("email", ""),
+        password=data.get("password", ""),
+        username=data.get("username", "")
+    )
+    return jsonify(result)
+
+
+@app.route("/api/auth/login", methods=["POST"])
+def api_login():
+    data = request.get_json() or {}
+    result = login(email=data.get("email", ""), password=data.get("password", ""))
+    return jsonify(result)
+
+
+@app.route("/api/me", methods=["GET"])
+def api_me():
+    user = authenticate(request)
+    if not user:
+        return jsonify({"error": "인증 필요", "user": None})
+    return jsonify({"user": user})
 
 
 # ── API: 결제 ──
