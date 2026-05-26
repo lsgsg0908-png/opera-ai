@@ -18,6 +18,7 @@ except Exception:
 
 import subprocess
 import shutil
+import time
 import tempfile
 from pathlib import Path
 
@@ -417,3 +418,67 @@ def ocr_image(image_path, lang="kor+eng"):
         return {"error": "Tesseract OCR이 설치되지 않았습니다"}
     except Exception as e:
         return {"error": str(e)}
+
+
+# ── WOL (Wake-on-LAN) ──
+
+def wake_on_lan(mac_address, broadcast_ip="255.255.255.255", port=9):
+    """WOL 매직패킷 전송
+    
+    Args:
+        mac_address: 대상 PC MAC 주소 (XX:XX:XX:XX:XX:XX 형식)
+        broadcast_ip: 브로드캐스트 IP
+        port: WOL 포트 (기본 9)
+    """
+    import socket
+    import struct
+    
+    # MAC 주소 정규화
+    mac = mac_address.replace(":", "").replace("-", "").replace(" ", "")
+    if len(mac) != 12:
+        return {"error": f"MAC 주소 형식 오류: {mac_address}"}
+    
+    try:
+        mac_bytes = bytes.fromhex(mac)
+    except ValueError:
+        return {"error": f"MAC 주소 변환 실패: {mac_address}"}
+    
+    # 매직패킷 생성: 6xFF + 16 x MAC 주소
+    magic_packet = b"\xff" * 6 + mac_bytes * 16
+    
+    try:
+        sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        sock.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
+        sock.sendto(magic_packet, (broadcast_ip, port))
+        sock.close()
+        return {"status": "ok", "mac": mac_address, "target": f"{broadcast_ip}:{port}"}
+    except Exception as e:
+        return {"error": f"WOL 전송 실패: {e}"}
+
+
+def shutdown_pc(delay=0):
+    """PC 종료"""
+    import platform
+    os_name = platform.system().lower()
+    try:
+        if os_name == "windows":
+            cmd = f"shutdown /s /t {delay}" if delay > 0 else "shutdown /s"
+        else:
+            cmd = f"shutdown -h +{delay}" if delay > 0 else "shutdown -h now"
+        subprocess.run(cmd, shell=True, timeout=5)
+        return {"status": "ok", "action": "shutdown", "delay": delay}
+    except Exception as e:
+        return {"error": str(e)}
+
+
+def pc_status():
+    """PC 상태 정보 (WOL 대상 확인용)"""
+    import psutil
+    return {
+        "status": "running",
+        "os": platform.platform(),
+        "hostname": platform.node(),
+        "uptime": time.time() - psutil.boot_time(),
+        "cpu_usage": psutil.cpu_percent(interval=0.1),
+        "memory_percent": psutil.virtual_memory().percent,
+    }

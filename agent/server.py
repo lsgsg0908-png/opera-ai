@@ -3,7 +3,7 @@
 OPERA AI — Main Server
 실행: python3 server.py
 """
-import os, sys, json, datetime, hashlib, hmac, threading
+import os, sys, json, datetime, hashlib, hmac, threading, time
 from pathlib import Path
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -32,8 +32,15 @@ from core.payment import (
     get_plans, calculate_price, create_subscription,
     get_subscription, cancel_subscription, get_bulk_discount_tiers
 )
-from core.user_manager import register, login, authenticate, get_user
+from core.user_manager import register, login, authenticate, get_user, logout, force_logout_all
 from core.tg_bot import get_bot, COMMANDS
+from core.paypal import (
+    create_order as paypal_create_order,
+    capture_order as paypal_capture_order,
+    verify_webhook as paypal_verify_webhook,
+    configure as paypal_configure,
+    get_config_status as paypal_status,
+)
 from core.security import (
     check_request_safety, check_if_blocked, apply_strike,
     check_rate_limit, get_security_status, is_path_blocked
@@ -51,6 +58,78 @@ CONFIG_PATH = DATA_DIR / "config.json"
 LICENSE_PATH = DATA_DIR / "license.json"
 HISTORY_DIR = DATA_DIR / "history"
 HISTORY_DIR.mkdir(exist_ok=True)
+
+# ── 보안 미들웨어 ──
+
+# 제한된 경로 (인증 필요)
+PROTECTED_PATHS = [
+    "/api/tokens/purchase", "/api/subscribe", "/api/me", "/api/config",
+    "/api/skills/select", "/api/execute", "/api/agent",
+]
+
+# 속도 제한 설정 (경로별 분/최대 요청)
+RATE_LIMITS = {
+    "default": 60,         # 일반 요청: 60/분
+    "/api/execute": 15,    # 실행 요청: 15/분
+    "/api/auth/login": 10, # 로그인 시도: 10/분
+    "/api/auth/register": 5, # 회원가입: 5/분
+}
+
+# 전역 Rate Limit 저장소
+_rate_store = {}
+
+
+@app.before_request
+def global_rate_limit():
+    """전역 Rate Limit 미들웨어"""
+    path = request.path
+    if path.startswith("/static") or path == "/":
+        return None
+    
+    # 경로별 제한 확인
+    limit = RATE_LIMITS.get("default", 60)
+    for p, l in RATE_LIMITS.items():
+        if path.startswith(p):
+            limit = l
+            break
+    
+    # IP 기반 레이트 리밋
+    ip = request.remote_addr or "unknown"
+    key = f"{ip}:{path.split('/')[1]}"
+    now = time.time()
+    
+    if key not in _rate_store:
+        _rate_store[key] = []
+    
+    # 1분 이내 요청만 유지
+    _rate_store[key] = [t for t in _rate_store[key] if now - t < 60]
+    
+    if len(_rate_store[key]) >= limit:
+        return jsonify({
+            "error": "rate_limit_exceeded",
+            "message": f"요청이 너무 빠릅니다. {limit}회/분 제한",
+            "retry_after": 60 - int(now - _rate_store[key][0])
+        }), 429
+    
+    _rate_store[key].append(now)
+    return None
+
+
+@app.after_request
+def add_security_headers(response):
+    """보안 응답 헤더 추가"""
+    # HSTS (HTTP Strict Transport Security)
+    response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
+    # XSS 방지
+    response.headers["X-Content-Type-Options"] = "nosniff"
+    response.headers["X-Frame-Options"] = "DENY"
+    response.headers["X-XSS-Protection"] = "1; mode=block"
+    # Referrer Policy
+    response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+    # Content Security Policy (API 전용)
+    if request.path.startswith("/api/"):
+        response.headers["Content-Security-Policy"] = "default-src 'self'; script-src 'none'; connect-src 'self'"
+    return response
 
 # ── 스킬 레지스트리 ──
 skill_registry = get_registry()
@@ -112,6 +191,29 @@ def api_login():
     return jsonify(result)
 
 
+@app.route("/api/auth/logout", methods=["POST"])
+def api_logout():
+    """로그아웃 (토큰 무효화)"""
+    auth = request.headers.get("Authorization", "")
+    token = auth.replace("Bearer ", "")
+    if token:
+        result = logout(token)
+        return jsonify(result)
+    return jsonify({"error": "no_token"}), 400
+
+
+@app.route("/api/auth/force-logout", methods=["POST"])
+def api_force_logout():
+    """사용자 강제 로그아웃 (모든 세션)"""
+    user = authenticate(request)
+    if not user:
+        return jsonify({"error": "인증 필요"}), 401
+    data = request.get_json() or {}
+    target_user_id = data.get("user_id", user["id"])
+    result = force_logout_all(target_user_id)
+    return jsonify(result)
+
+
 @app.route("/api/me", methods=["GET"])
 def api_me():
     user = authenticate(request)
@@ -161,6 +263,85 @@ def api_subscription():
 def api_cancel():
     data = request.get_json() or {}
     return jsonify(cancel_subscription(data.get("id", "")))
+
+
+# ── API: PayPal ──
+
+@app.route("/api/paypal/config", methods=["GET", "POST"])
+def api_paypal_config():
+    """PayPal 설정 조회/변경"""
+    if request.method == "POST":
+        data = request.get_json() or {}
+        return jsonify(paypal_configure(
+            mode=data.get("mode"),
+            client_id=data.get("client_id"),
+            secret=data.get("secret"),
+            webhook_id=data.get("webhook_id"),
+        ))
+    return jsonify(paypal_status())
+
+
+@app.route("/api/paypal/create-order", methods=["POST"])
+def api_paypal_create_order():
+    """PayPal 주문 생성 → 결제 URL 반환"""
+    data = request.get_json() or {}
+    result = paypal_create_order(
+        plan_id=data.get("plan", "pro"),
+        billing=data.get("billing", "monthly"),
+        quantity=data.get("quantity", 1),
+        bulk=data.get("bulk", False),
+        return_url=data.get("return_url"),
+        cancel_url=data.get("cancel_url"),
+    )
+    return jsonify(result)
+
+
+@app.route("/api/paypal/capture-order", methods=["POST"])
+def api_paypal_capture():
+    """PayPal 결제 캡처 (사용자 승인 후)"""
+    data = request.get_json() or {}
+    order_id = data.get("paypal_order_id", "")
+    if not order_id:
+        token = request.args.get("token", "")  # PayPal redirects with ?token=XXX
+        if token:
+            order_id = token
+    
+    result = paypal_capture_order(order_id)
+    
+    # 캡처 성공 시 구독 생성
+    if result.get("status") == "completed":
+        plan_id = data.get("plan", "pro")
+        billing = data.get("billing", "monthly")
+        quantity = data.get("quantity", 1)
+        sub = create_subscription(plan_id, billing, quantity)
+        result["subscription"] = sub
+    
+    return jsonify(result)
+
+
+@app.route("/api/paypal/webhook", methods=["POST"])
+def api_paypal_webhook():
+    """PayPal 웹훅 수신 (결제 완료/취소/환불 통지)"""
+    body = request.get_data(as_text=True)
+    verified, event_type = paypal_verify_webhook(dict(request.headers), body)
+    
+    if not verified:
+        return jsonify({"error": "webhook verification failed"}), 403
+    
+    event = request.get_json(silent=True) or {}
+    resource = event.get("resource", {})
+    
+    if event_type == "CHECKOUT.ORDER.APPROVED":
+        # 자동 캡처
+        order_id = resource.get("id", "")
+        if order_id:
+            capture = paypal_capture_order(order_id)
+            if capture.get("status") == "completed":
+                plan_id = "pro"
+                sub = create_subscription(plan_id, "monthly", 1)
+                capture["subscription"] = sub
+    
+    return jsonify({"status": "received", "event_type": event_type})
 
 
 # ── API: 텔레그램 ──
@@ -494,6 +675,305 @@ def api_history():
     return jsonify({"entries": entries[:200]})
 
 
+# ── Agent API (HMAC 검증) ──
+
+AGENT_HMAC_KEY = DATA_DIR / "agent_hmac.key"
+if not AGENT_HMAC_KEY.exists():
+    AGENT_HMAC_KEY.write_text(hashlib.sha256(os.urandom(64)).hexdigest())
+
+def _verify_hmac(request):
+    """HMAC 서명 검증"""
+    try:
+        secret = AGENT_HMAC_KEY.read_text().strip()
+        signature = request.headers.get("X-HMAC-Signature", "")
+        timestamp = request.headers.get("X-HMAC-Timestamp", "")
+        body = request.get_data(as_text=True) or ""
+        msg = f"{timestamp}:{body}"
+        expected = hmac.new(secret.encode(), msg.encode(), hashlib.sha256).hexdigest()
+        # 시간 검증 (5분 이내)
+        now = int(datetime.datetime.utcnow().timestamp())
+        if abs(now - int(timestamp)) > 300:
+            return None, "HMAC timestamp expired"
+        if not hmac.compare_digest(signature, expected):
+            return None, "HMAC signature mismatch"
+        return True, None
+    except Exception as e:
+        return None, str(e)
+
+
+def _agent_auth_required(f):
+    """Agent API 인증 데코레이터"""
+    from functools import wraps
+    @wraps(f)
+    def wrapper(*args, **kwargs):
+        ok, err = _verify_hmac(request)
+        if not ok:
+            return jsonify({"error": "auth_failed", "detail": err}), 401
+        return f(*args, **kwargs)
+    return wrapper
+
+
+@app.route("/api/agent/auth", methods=["POST"])
+def agent_auth():
+    """에이전트 인증 - 라이선스 키 검증"""
+    data = request.get_json(silent=True) or {}
+    license_key = data.get("license_key", "")
+    mac_addr = data.get("mac_address", "")
+    hw_id = data.get("hardware_id", "")
+    
+    # 라이선스 검증
+    lic = DATA_DIR / "license.json"
+    if not lic.exists():
+        return jsonify({"error": "no_license"}), 403
+    
+    license_data = json.loads(lic.read_text())
+    if license_data.get("key") != license_key or not license_data.get("valid", False):
+        return jsonify({"error": "invalid_license"}), 403
+    
+    # 만료 확인
+    expires = license_data.get("expires_at")
+    if expires and datetime.datetime.fromisoformat(expires) < datetime.datetime.now():
+        return jsonify({"error": "license_expired"}), 403
+    
+    # HMAC 시크릿 교환 (임시 토큰 발급)
+    import uuid
+    session_token = uuid.uuid4().hex
+    agent_sessions = DATA_DIR / "agent_sessions.json"
+    sessions = {}
+    if agent_sessions.exists():
+        sessions = json.loads(agent_sessions.read_text())
+    sessions[session_token] = {
+        "license_key": license_key,
+        "mac": mac_addr,
+        "hardware_id": hw_id,
+        "authenticated_at": datetime.datetime.utcnow().isoformat(),
+        "plan": license_data.get("plan", "trial"),
+    }
+    agent_sessions.write_text(json.dumps(sessions, indent=2))
+    
+    return jsonify({
+        "status": "authenticated",
+        "session_token": session_token,
+        "plan": license_data.get("plan", "trial"),
+        "expires_at": license_data.get("expires_at"),
+    })
+
+
+@app.route("/api/agent/tasks", methods=["GET"])
+@_agent_auth_required
+def agent_tasks():
+    """에이전트 작업 큐 조회 (Polling)"""
+    status_filter = request.args.get("status", "pending")
+    tasks = []
+    queue_file = DATA_DIR / "tasks.json"
+    if queue_file.exists():
+        try:
+            data = json.loads(queue_file.read_text())
+            all_items = data.get("tasks", []) + data.get("queue", []) + data.get("running", [])
+            tasks = [t for t in all_items if isinstance(t, dict) and t.get("status") == status_filter]
+        except Exception:
+            pass
+    return jsonify({
+        "tasks": tasks[:20],
+        "count": len(tasks),
+        "plan": _load_config().get("plan", "trial"),
+    })
+
+
+@app.route("/api/agent/result", methods=["POST"])
+@_agent_auth_required
+def agent_result():
+    """작업 결과 제출"""
+    data = request.get_json(silent=True) or {}
+    task_id = data.get("task_id", "")
+    result = data.get("result", {})
+    status = data.get("status", "completed")
+    tokens_used = data.get("tokens_used", 0)
+    
+    queue_file = DATA_DIR / "tasks.json"
+    if queue_file.exists():
+        try:
+            all_data = json.loads(queue_file.read_text())
+            for key in ["tasks", "queue", "running"]:
+                for t in all_data.get(key, []):
+                    if isinstance(t, dict) and t.get("id") == task_id:
+                        t["status"] = status
+                        t["result"] = result
+                        t["completed_at"] = datetime.datetime.utcnow().isoformat()
+                        break
+            queue_file.write_text(json.dumps(all_data, indent=2))
+        except Exception:
+            pass
+    
+    # 토큰 소비
+    if tokens_used > 0:
+        consume_tokens(tokens_used)
+    
+    return jsonify({"status": "received", "task_id": task_id})
+
+
+@app.route("/api/agent/status", methods=["POST"])
+@_agent_auth_required
+def agent_status_report():
+    """에이전트 상태 보고"""
+    data = request.get_json(silent=True) or {}
+    report = {
+        "timestamp": datetime.datetime.utcnow().isoformat(),
+        "hostname": data.get("hostname", "unknown"),
+        "cpu": data.get("cpu", 0),
+        "memory": data.get("memory", 0),
+        "uptime": data.get("uptime", 0),
+        "version": data.get("version", "unknown"),
+        "connected_pc": data.get("connected_pc", False),
+    }
+    
+    # 상태 저장
+    status_file = DATA_DIR / "agent_status.json"
+    status_file.write_text(json.dumps(report, indent=2))
+    
+    return jsonify({"status": "recorded", "plan": _load_config().get("plan", "trial")})
+
+
+@app.route("/api/agent/command", methods=["POST"])
+def agent_command():
+    """긴급 명령 발송 (WOL, 종료)"""
+    data = request.get_json(silent=True) or {}
+    command = data.get("command", "")
+    params = data.get("params", {})
+    
+    if command == "wol":
+        mac = params.get("mac_address", "")
+        if not mac:
+            return jsonify({"error": "MAC address required"}), 400
+        from core.executor import wake_on_lan
+        result = wake_on_lan(mac)
+        return jsonify(result)
+    elif command == "shutdown":
+        delay = params.get("delay", 0)
+        from core.executor import shutdown_pc
+        result = shutdown_pc(delay)
+        return jsonify(result)
+    elif command == "pc-status":
+        from core.executor import pc_status
+        result = pc_status()
+        return jsonify(result)
+    else:
+        return jsonify({"error": f"Unknown command: {command}"}), 400
+
+
+@app.route("/api/agent/tokens", methods=["GET"])
+def agent_token_status():
+    """토큰 잔여량 조회"""
+    status = get_token_status()
+    return jsonify(status)
+
+
+@app.route("/api/agent/hmac_key", methods=["POST"])
+def agent_generate_hmac():
+    """HMAC 키 재생성 (인증된 사용자만)"""
+    auth = request.headers.get("Authorization", "")
+    user = authenticate(auth.replace("Bearer ", ""))
+    if not user:
+        return jsonify({"error": "unauthorized"}), 401
+    
+    new_key = hashlib.sha256(os.urandom(64)).hexdigest()
+    AGENT_HMAC_KEY.write_text(new_key)
+    return jsonify({"status": "ok", "hmac_key": new_key})
+
+
+@app.route("/api/agent/sessions", methods=["GET"])
+def agent_active_sessions():
+    """활성 에이전트 세션 목록"""
+    auth = request.headers.get("Authorization", "")
+    user = authenticate(auth.replace("Bearer ", ""))
+    if not user:
+        return jsonify({"error": "unauthorized"}), 401
+    
+    sess_file = DATA_DIR / "agent_sessions.json"
+    sessions = {}
+    if sess_file.exists():
+        sessions = json.loads(sess_file.read_text())
+    return jsonify({"sessions": sessions, "count": len(sessions)})
+
+
+# ── 통계/모니터링 API ──
+
+@app.route("/api/monitor", methods=["GET"])
+def api_monitor():
+    """서비스 통계 대시보드"""
+    # 기본 정보 (비인증 가능)
+    
+    # 사용자 수
+    users_file = DATA_DIR / "users.json"
+    user_count = 0
+    if users_file.exists():
+        users = json.loads(users_file.read_text())
+        if isinstance(users, dict):
+            user_count = len(users.get("users", users))
+        elif isinstance(users, list):
+            user_count = len(users)
+    
+    # 구독 통계
+    sub_file = DATA_DIR / "subscriptions.json"
+    active_subs = 0
+    total_revenue = 0
+    if sub_file.exists():
+        subs = json.loads(sub_file.read_text())
+        for s in subs.get("subscriptions", []):
+            if s.get("status") == "active":
+                active_subs += 1
+                total_revenue += s.get("price", 0)
+    
+    # 작업 통계
+    tasks_file = DATA_DIR / "tasks.json"
+    completed_tasks = 0
+    pending_tasks = 0
+    if tasks_file.exists():
+        try:
+            tdata = json.loads(tasks_file.read_text())
+            for key in ["tasks", "queue", "running"]:
+                for t in tdata.get(key, []):
+                    s = t.get("status", "")
+                    if s == "completed":
+                        completed_tasks += 1
+                    elif s == "pending":
+                        pending_tasks += 1
+        except Exception:
+            pass
+    
+    # 토큰 통계
+    token_file = DATA_DIR / "tokens.json"
+    total_tokens = 0
+    if token_file.exists():
+        try:
+            tdata = json.loads(token_file.read_text())
+            total_tokens = tdata.get("purchased_pool", 0) + tdata.get("daily_pool", 0)
+        except Exception:
+            pass
+    
+    return jsonify({
+        "users": user_count,
+        "active_subscriptions": active_subs,
+        "estimated_monthly_revenue": total_revenue,
+        "tasks_completed": completed_tasks,
+        "tasks_pending": pending_tasks,
+        "total_tokens_remaining": total_tokens,
+        "agent_status_file": str(DATA_DIR / "agent_status.json"),
+        "agent_connected": agent_sessions_file_exists(),
+        "uptime": int(process_uptime()),
+    })
+
+
+def agent_sessions_file_exists():
+    return (DATA_DIR / "agent_sessions.json").exists()
+
+
+def process_uptime():
+    with open("/proc/uptime") as f:
+        return float(f.read().split()[0])
+
+
+
 # ── 웹 대시보드 (랜딩페이지) ──
 
 @app.route("/")
@@ -503,6 +983,18 @@ def index():
 
 @app.route("/<path:path>")
 def static_files(path):
+    # Try pages/ dir first (with .html extension if missing)
+    candidates = [
+        BASE_DIR.parent / "pages" / path,
+        BASE_DIR.parent / "pages" / (path + ".html"),
+        BASE_DIR.parent / path,
+        BASE_DIR.parent / (path + ".html"),
+    ]
+    for cp in candidates:
+        if cp.exists() and cp.is_file():
+            parent = cp.parent
+            fname = cp.name
+            return send_from_directory(str(parent), fname)
     return send_from_directory(str(BASE_DIR.parent), path)
 
 

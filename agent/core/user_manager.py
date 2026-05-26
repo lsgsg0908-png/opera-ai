@@ -156,6 +156,11 @@ def authenticate(request):
     if not payload:
         return None
 
+    # 세션 만료 확인 (로그아웃된 토큰)
+    sessions = _load_sessions()
+    if token in [s.get("token") for s in sessions.get("blacklist", [])]:
+        return None
+
     user = get_user(payload["user_id"])
     if not user:
         return None
@@ -168,3 +173,46 @@ def authenticate(request):
     _save_config(cfg)
 
     return user
+
+
+def logout(token):
+    """로그아웃 (토큰 블랙리스트)"""
+    sessions = _load_sessions()
+    if "blacklist" not in sessions:
+        sessions["blacklist"] = []
+    sessions["blacklist"].append({
+        "token": token,
+        "invalidated_at": datetime.now().isoformat(),
+    })
+    # 100개 이상이면 오래된 것 정리
+    if len(sessions["blacklist"]) > 100:
+        sessions["blacklist"] = sessions["blacklist"][-100:]
+    _save_sessions(sessions)
+    return {"status": "logged_out"}
+
+
+def force_logout_all(user_id):
+    """특정 사용자의 모든 세션 강제 로그아웃"""
+    data = _load_users()
+    user = next((u for u in data["users"] if u["id"] == user_id), None)
+    if not user:
+        return {"error": "user_not_found"}
+
+    # 비밀번호 해시 변경 (모든 기존 토큰 무효화)
+    user["password_hash"] = _hash_password(
+        user["password_hash"].split("$")[0],
+        uuid.uuid4().hex[:16]
+    )
+    _save_users(data)
+
+    # 세션 블랙리스트에 특수 태그
+    sessions = _load_sessions()
+    if "force_logouts" not in sessions:
+        sessions["force_logouts"] = []
+    sessions["force_logouts"].append({
+        "user_id": user_id,
+        "forced_at": datetime.now().isoformat(),
+    })
+    _save_sessions(sessions)
+
+    return {"status": "force_logged_out", "user_id": user_id}

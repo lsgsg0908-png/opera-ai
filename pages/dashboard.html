@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>OPERA AI — Dashboard</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{--black:#080808;--white:#f4f4f0;--gray:#111;--gray2:#1a1a1a;--muted:#888;--accent:#c8ff00;--green:#22d3a0;--red:#ff5a5a;--border:#222}
+body{background:var(--black);color:var(--white);font-family:'Space Grotesk',sans-serif;font-size:14px;min-height:100vh}
+nav{display:flex;align-items:center;justify-content:space-between;padding:20px 40px;border-bottom:1px solid var(--border);background:rgba(8,8,8,.95)}
+.logo{font-family:'Space Mono',monospace;font-size:13px;font-weight:700;letter-spacing:2px;color:var(--white)}
+.logo span{color:var(--accent)}
+.dash{display:flex;min-height:calc(100vh-66px)}
+.sidebar{width:240px;border-right:1px solid var(--border);padding:24px 0;flex-shrink:0}
+.side-item{padding:12px 24px;color:var(--muted);font-size:13px;cursor:pointer;transition:all .2s;border-left:2px solid transparent}
+.side-item:hover{color:var(--white);background:var(--gray)}
+.side-item.active{color:var(--accent);border-left-color:var(--accent);background:rgba(200,255,0,.05)}
+.main{flex:1;padding:32px 40px;overflow-y:auto}
+h1{font-size:24px;font-weight:700;margin-bottom:24px}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:16px;margin-bottom:32px}
+.card{padding:24px;background:var(--gray);border:1px solid var(--border);border-radius:0}
+.card b{display:block;font-size:28px;font-weight:700;color:var(--accent);margin-bottom:4px}
+.card small{color:var(--muted);font-size:12px}
+.card .label{font-size:11px;font-family:'Space Mono',monospace;color:var(--muted);margin-bottom:12px;letter-spacing:1px}
+.section{margin-bottom:40px}
+.section h2{font-size:16px;font-weight:500;margin-bottom:16px;color:var(--muted)}
+.table{width:100%;border-collapse:collapse;font-size:13px}
+.table th,.table td{padding:10px 16px;text-align:left;border-bottom:1px solid var(--border)}
+.table th{font-family:'Space Mono',monospace;font-size:10px;color:var(--accent);letter-spacing:1px}
+.table td{color:var(--muted)}
+.status-dot{width:8px;height:8px;border-radius:50%;display:inline-block;margin-right:6px}
+.dot-green{background:var(--green)}
+.dot-yellow{background:#f0b429}
+.dot-red{background:var(--red)}
+.btn-small{font-family:'Space Mono',monospace;font-size:9px;padding:6px 12px;background:var(--accent);color:var(--black);border:none;cursor:pointer;letter-spacing:1px}
+@media(max-width:768px){.sidebar{display:none}.main{padding:20px}}
+</style>
+</head>
+<body>
+<nav>
+  <a href="/" class="logo">OPERA<span>_AI</span> <span style="font-size:10px;color:var(--muted);letter-spacing:0">Dashboard</span></a>
+  <div><a href="/" style="color:var(--muted);text-decoration:none;font-size:12px">← Back to Site</a></div>
+</nav>
+<div class="dash">
+  <div class="sidebar">
+    <div class="side-item active">📊 Overview</div>
+    <div class="side-item">🤖 Agents</div>
+    <div class="side-item">📋 Tasks</div>
+    <div class="side-item">⚙️ Skills</div>
+    <div class="side-item">🪙 Tokens</div>
+    <div class="side-item">🔧 Settings</div>
+  </div>
+  <div class="main">
+    <h1>Dashboard</h1>
+    <div class="grid">
+      <div class="card"><div class="label">STATUS</div><b><span class="status-dot dot-green"></span>Online</b><small>Agent running</small></div>
+      <div class="card"><div class="label">TOKENS TODAY</div><b>8,450</b><small>of 15,000 used</small></div>
+      <div class="card"><div class="label">TASKS TODAY</div><b>12</b><small>completed</small></div>
+      <div class="card"><div class="label">PC UPTIME</div><b>3d 14h</b><small>last WOL: n/a</small></div>
+    </div>
+    <div class="section">
+      <h2>Recent Tasks</h2>
+      <table class="table">
+        <tr><th>Task</th><th>Status</th><th>Time</th><th></th></tr>
+        <tr><td>📊 엑셀 데이터 정리</td><td><span class="status-dot dot-green"></span>Completed</td><td>2m ago</td><td><button class="btn-small">VIEW</button></td></tr>
+        <tr><td>📄 보고서 생성</td><td><span class="status-dot dot-green"></span>Completed</td><td>15m ago</td><td><button class="btn-small">VIEW</button></td></tr>
+        <tr><td>🌐 웹 검색: 시장 동향</td><td><span class="status-dot dot-yellow"></span>Running</td><td>now</td><td><button class="btn-small">VIEW</button></td></tr>
+        <tr><td>📧 이메일 발송</td><td><span class="status-dot dot-green"></span>Completed</td><td>1h ago</td><td><button class="btn-small">VIEW</button></td></tr>
+      </table>
+    </div>
+  </div>
+</div>
+</body>
+</html>

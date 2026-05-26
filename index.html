@@ -3,40 +3,75 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>OPERA AI — PC Local AI Agent</title>
+<title>OPERA AI — PC에서 직접 일하는 AI 직원</title>
+<meta name="description" content="OPERA AI - PC에 설치하는 AI 직원. XG5000, 화물 프로그램, 문서 작업 자동화. 리치가 직접 마우스와 키보드를 움직입니다.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
-:root{--black:#080808;--white:#f4f4f0;--gray:#111;--gray2:#1a1a1a;--muted:#888;--accent:#c8ff00;--green:#22d3a0;--red:#ff5a5a;--blue:#60a5fa;--border:#222}
+:root{--black:#080808;--white:#f4f4f0;--gray:#111;--gray2:#1a1a1a;--muted:#888;--accent:#c8ff00;--green:#22d3a0;--red:#ff5a5a;--blue:#60a5fa;--border:#222;--card:#0e0e0e}
+html{scroll-behavior:smooth}
 body{background:var(--black);color:var(--white);font-family:'Space Grotesk',sans-serif;font-size:16px;line-height:1.5}
-nav{position:fixed;top:0;left:0;right:0;z-index:100;display:flex;align-items:center;justify-content:space-between;padding:24px 40px;background:rgba(8,8,8,0.9);backdrop-filter:blur(20px);border-bottom:1px solid var(--border)}
-.logo{font-family:'Space Mono',monospace;font-size:15px;font-weight:700;letter-spacing:2px;color:var(--white);text-decoration:none}
+a{text-decoration:none;color:inherit}
+nav{position:fixed;top:0;left:0;right:0;z-index:100;display:flex;align-items:center;justify-content:space-between;padding:24px 40px;background:rgba(8,8,8,0.92);backdrop-filter:blur(20px);border-bottom:1px solid var(--border)}
+.logo{font-family:'Space Mono',monospace;font-size:15px;font-weight:700;letter-spacing:2px;color:var(--white)}
 .logo span{color:var(--accent)}
 .nav-right{display:flex;align-items:center;gap:24px}
 .nav-link{color:var(--muted);text-decoration:none;font-size:13px;transition:color .2s}
 .nav-link:hover{color:var(--white)}
-.nav-cta{font-family:'Space Mono',monospace;font-size:11px;font-weight:700;letter-spacing:1px;color:var(--black);background:var(--accent);padding:10px 20px;text-decoration:none}
+.nav-cta{font-family:'Space Mono',monospace;font-size:11px;font-weight:700;letter-spacing:1px;color:var(--black);background:var(--accent);padding:10px 20px;cursor:pointer;transition:opacity .2s}
+.nav-cta:hover{opacity:.85}
 .hero{min-height:100vh;display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);border-bottom:1px solid var(--border);overflow:hidden}
 .hero-left{display:flex;flex-direction:column;justify-content:flex-end;padding:160px 60px 80px;border-right:1px solid var(--border)}
 .hero-tag{font-family:'Space Mono',monospace;font-size:11px;letter-spacing:3px;color:var(--accent);margin-bottom:40px;text-transform:uppercase}
 h1{font-size:clamp(40px,5vw,72px);font-weight:700;line-height:.95;letter-spacing:-3px;margin-bottom:32px}
 h1 em{font-style:normal;color:var(--accent)}
-.sub{font-size:16px;color:var(--muted);max-width:380px;line-height:1.8;margin-bottom:48px}
+.sub{font-size:16px;color:var(--muted);max-width:420px;line-height:1.8;margin-bottom:48px}
 .hero-actions{display:flex;gap:16px;flex-wrap:wrap}
-.btn-main{font-family:'Space Mono',monospace;font-size:12px;font-weight:700;letter-spacing:1px;background:var(--accent);color:var(--black);padding:14px 28px;text-decoration:none}
-.btn-outline{font-family:'Space Mono',monospace;font-size:12px;font-weight:700;letter-spacing:1px;background:transparent;color:var(--white);padding:14px 28px;text-decoration:none;border:1px solid var(--border)}
+.btn-main{font-family:'Space Mono',monospace;font-size:12px;font-weight:700;letter-spacing:1px;background:var(--accent);color:var(--black);padding:14px 28px;cursor:pointer;display:inline-block;transition:opacity .2s}
+.btn-main:hover{opacity:.85}
+.btn-outline{font-family:'Space Mono',monospace;font-size:12px;font-weight:700;letter-spacing:1px;background:transparent;color:var(--white);padding:14px 28px;border:1px solid var(--border);cursor:pointer;display:inline-block;transition:border-color .2s}
+.btn-outline:hover{border-color:var(--accent)}
 .hero-right{display:flex;flex-direction:column;justify-content:flex-end;padding:160px 60px 80px}
-.hero-demo{background:var(--gray);border:1px solid var(--border);padding:32px;font-family:'Space Mono',monospace;font-size:13px;line-height:2;position:relative;overflow:hidden}
+.hero-demo{background:var(--gray);border:1px solid var(--border);padding:32px;font-family:'Space Mono',monospace;font-size:13px;line-height:2;overflow:hidden}
 .hero-demo::before{content:'>_';color:var(--accent)}
 .demo-cursor{display:inline-block;width:8px;height:16px;background:var(--accent);animation:blink 1s infinite;margin-left:4px;vertical-align:middle}
 @keyframes blink{0%,100%{opacity:1}50%{opacity:0}}
-.features{border-bottom:1px solid var(--border)}
+
+/* Features */
+.features-section{border-bottom:1px solid var(--border)}
 .features-grid{display:grid;grid-template-columns:repeat(3,1fr)}
 .feature{padding:80px 48px;border-right:1px solid var(--border)}
 .feature:last-child{border-right:none}
 .feature-icon{font-size:32px;margin-bottom:24px;display:block}
 .feature-title{font-size:18px;font-weight:500;margin-bottom:16px}
 .feature-desc{font-size:14px;color:var(--muted);line-height:1.8}
+
+/* Skills Preview */
+.skills-section{padding:80px 60px;border-bottom:1px solid var(--border)}
+.skill-header{font-family:'Space Mono',monospace;font-size:11px;letter-spacing:3px;color:var(--accent);margin-bottom:16px;text-transform:uppercase}
+.skill-title{font-size:clamp(24px,3vw,40px);font-weight:700;margin-bottom:40px}
+.skills-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:1px;background:var(--border);border:1px solid var(--border)}
+.skill-item{padding:24px;background:var(--black);display:flex;flex-direction:column;gap:8px;transition:background .2s}
+.skill-item:hover{background:var(--gray)}
+.skill-icon{font-size:24px}
+.skill-name{font-size:13px;font-weight:500;color:var(--white)}
+.skill-desc{font-size:11px;color:var(--muted);line-height:1.5}
+
+/* Token System */
+.token-section{padding:80px 60px;border-bottom:1px solid var(--border);background:var(--gray)}
+.token-header{font-family:'Space Mono',monospace;font-size:11px;letter-spacing:3px;color:var(--accent);margin-bottom:16px;text-transform:uppercase}
+.token-grid{display:grid;grid-template-columns:1fr 1fr;gap:48px;margin-top:40px}
+.token-info h3{font-size:20px;font-weight:500;margin-bottom:20px}
+.token-info p{font-size:14px;color:var(--muted);line-height:1.8;margin-bottom:16px}
+.token-table{width:100%;border-collapse:collapse;font-size:13px}
+.token-table th,.token-table td{padding:12px 16px;text-align:left;border-bottom:1px solid var(--border)}
+.token-table th{font-family:'Space Mono',monospace;font-size:10px;letter-spacing:1px;color:var(--accent)}
+.token-table td{color:var(--muted)}
+.token-table td b{color:var(--white)}
+
+/* How It Works */
 .how-section{border-bottom:1px solid var(--border);padding:80px 60px}
 .how-header{font-family:'Space Mono',monospace;font-size:11px;letter-spacing:3px;color:var(--accent);margin-bottom:48px;text-transform:uppercase}
 .how-steps{display:grid;grid-template-columns:repeat(3,1fr);gap:48px}
@@ -44,6 +79,8 @@ h1 em{font-style:normal;color:var(--accent)}
 .step-n{font-family:'Space Mono',monospace;font-size:32px;font-weight:700;color:var(--accent);margin-bottom:16px}
 .step-title{font-size:16px;font-weight:500;margin-bottom:12px}
 .step-desc{font-size:13px;color:var(--muted);line-height:1.7}
+
+/* Pricing */
 .pricing-section{padding:80px 60px;border-bottom:1px solid var(--border)}
 .pricing-header{font-family:'Space Mono',monospace;font-size:11px;letter-spacing:3px;color:var(--accent);margin-bottom:48px;text-transform:uppercase}
 .pricing-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:var(--border);border:1px solid var(--border)}
@@ -56,26 +93,90 @@ h1 em{font-style:normal;color:var(--accent)}
 .plan-feats{list-style:none;margin-bottom:32px}
 .plan-feats li{font-size:13px;padding:8px 0;border-bottom:1px solid var(--border);color:var(--muted)}
 .plan-feats li::before{content:'✓ ';color:var(--accent)}
-.plan-cta{display:block;font-family:'Space Mono',monospace;font-size:11px;font-weight:700;letter-spacing:1px;text-align:center;padding:14px;background:var(--accent);color:var(--black);text-decoration:none}
-.plan-cta:hover{opacity:.9}
+.plan-cta{display:block;font-family:'Space Mono',monospace;font-size:11px;font-weight:700;letter-spacing:1px;text-align:center;padding:14px;background:var(--accent);color:var(--black);cursor:pointer;transition:opacity .2s}
+.plan-cta:hover{opacity:.85}
 .hot-badge{position:absolute;top:12px;right:12px;font-family:'Space Mono',monospace;font-size:9px;letter-spacing:1px;background:var(--accent);color:var(--black);padding:4px 10px}
-.cta-section{padding:120px 60px;text-align:center}
+
+/* Comparison Table */
+.comp-section{padding:40px 60px 80px;border-bottom:1px solid var(--border)}
+.comp-header{font-family:'Space Mono',monospace;font-size:10px;letter-spacing:2px;color:var(--muted);margin-bottom:24px;text-transform:uppercase;text-align:center}
+.comp-table{width:100%;border-collapse:collapse;font-size:12px}
+.comp-table th,.comp-table td{padding:10px 16px;text-align:center;border-bottom:1px solid var(--border)}
+.comp-table th{font-family:'Space Mono',monospace;font-size:9px;letter-spacing:1px;color:var(--accent);background:var(--gray);text-transform:uppercase}
+.comp-table td{color:var(--muted)}
+.comp-table td:first-child{text-align:left;color:var(--white);font-weight:500}
+.comp-table td b{color:var(--white)}
+.comp-table .y{color:var(--green)}
+.comp-table .n{color:var(--red)}
+
+/* FAQ */
+.faq-section{padding:80px 60px;border-bottom:1px solid var(--border)}
+.faq-header{font-family:'Space Mono',monospace;font-size:11px;letter-spacing:3px;color:var(--accent);margin-bottom:48px;text-transform:uppercase}
+.faq-list{max-width:800px;margin:0 auto;display:grid;gap:4px}
+.faq-q{padding:20px 24px;background:var(--gray);border:1px solid var(--border);cursor:pointer;display:flex;justify-content:space-between;align-items:center;font-size:14px;font-weight:500;transition:background .2s;user-select:none}
+.faq-q:hover{background:var(--gray2)}
+.faq-q .arrow{font-size:12px;color:var(--muted);transition:transform .2s}
+.faq-q.active .arrow{transform:rotate(180deg)}
+.faq-a{padding:0 24px;background:var(--card);border:1px solid var(--border);border-top:none;max-height:0;overflow:hidden;transition:max-height .3s,padding .3s;font-size:13px;color:var(--muted);line-height:1.7}
+.faq-a.open{max-height:300px;padding:20px 24px}
+
+/* CTA */
+.cta-section{padding:120px 60px;text-align:center;background:linear-gradient(180deg,var(--black),var(--gray))}
 .cta-section h2{font-size:clamp(32px,4vw,56px);font-weight:700;letter-spacing:-2px;margin-bottom:24px}
 .cta-section p{color:var(--muted);margin-bottom:40px;font-size:16px}
+
+/* Footer */
 footer{padding:40px 60px;border-top:1px solid var(--border);display:flex;justify-content:space-between;font-size:12px;color:var(--muted);font-family:'Space Mono',monospace}
-footer a{color:var(--muted);text-decoration:none}
+footer a{color:var(--muted);transition:color .2s}
 footer a:hover{color:var(--white)}
-@media(max-width:768px){.hero{grid-template-columns:1fr}.hero-left,.hero-right{padding:100px 24px 60px}.features-grid{grid-template-columns:1fr}.feature{padding:40px 24px;border-right:none;border-bottom:1px solid var(--border)}.how-steps{grid-template-columns:1fr}.pricing-grid{grid-template-columns:1fr}.pricing-section,.how-section,.cta-section{padding:60px 24px}footer{flex-direction:column;gap:12px;padding:24px}}
+
+/* Auth Modal */
+.modal{display:none;position:fixed;inset:0;z-index:200;background:rgba(0,0,0,.7);backdrop-filter:blur(8px);align-items:center;justify-content:center;padding:20px}
+.modal.show{display:flex}
+.modal-box{background:var(--gray);border:1px solid var(--border);padding:40px;max-width:440px;width:100%;max-height:90vh;overflow-y:auto}
+.modal-close{float:right;background:none;border:none;color:var(--muted);font-size:20px;cursor:pointer;padding:4px;line-height:1}
+.modal-close:hover{color:var(--white)}
+.modal h2{font-size:22px;font-weight:700;margin-bottom:8px}
+.modal p{color:var(--muted);font-size:13px;margin-bottom:20px;line-height:1.6}
+.modal-field{margin-bottom:16px}
+.modal-field label{display:block;font-size:11px;font-family:'Space Mono',monospace;color:var(--muted);margin-bottom:6px;text-transform:uppercase;letter-spacing:1px}
+.modal-field input{width:100%;padding:12px 14px;background:var(--black);border:1px solid var(--border);color:var(--white);font-family:'Space Grotesk',sans-serif;font-size:14px;outline:none;transition:border-color .2s}
+.modal-field input:focus{border-color:var(--accent)}
+.modal-btn{width:100%;padding:14px;border:none;background:var(--accent);color:var(--black);font-family:'Space Mono',monospace;font-size:11px;font-weight:700;letter-spacing:1px;cursor:pointer;transition:opacity .2s}
+.modal-btn:hover{opacity:.85}
+.modal-btn:disabled{opacity:.3;cursor:default}
+.modal-switch{margin-top:16px;text-align:center;font-size:12px;color:var(--muted)}
+.modal-switch a{color:var(--accent);cursor:pointer}
+.modal-plan{display:flex;justify-content:space-between;align-items:center;padding:12px 14px;border:1px solid var(--border);margin-bottom:8px;cursor:pointer;transition:border-color .2s;background:var(--black)}
+.modal-plan:hover{border-color:var(--accent)}
+.modal-plan.selected{border-color:var(--accent);background:var(--gray2)}
+.modal-pname{font-weight:500;font-size:14px}
+.modal-pprice{font-family:'Space Mono',monospace;color:var(--accent);font-size:14px}
+
+/* Responsive */
+@media(max-width:768px){
+  .hero{grid-template-columns:1fr}
+  .hero-left,.hero-right{padding:100px 24px 60px}
+  .features-grid,.skills-grid{grid-template-columns:1fr}
+  .feature{padding:40px 24px;border-right:none;border-bottom:1px solid var(--border)}
+  .how-steps,.token-grid{grid-template-columns:1fr}
+  .pricing-grid{grid-template-columns:1fr}
+  .skills-section,.pricing-section,.comp-section,.how-section,.faq-section,.token-section,.cta-section{padding:60px 24px}
+  footer{flex-direction:column;gap:12px;padding:24px}
+}
 </style>
 </head>
 <body>
+
 <nav>
   <a href="/" class="logo">OPERA<span>_AI</span></a>
   <div class="nav-right">
     <a href="#features" class="nav-link">Features</a>
+    <a href="#skills" class="nav-link">Skills</a>
     <a href="#pricing" class="nav-link">Pricing</a>
-    <a href="/login" class="nav-link">Dashboard</a>
-    <a href="#download" class="nav-cta">DOWNLOAD →</a>
+    <a href="#faq" class="nav-link">FAQ</a>
+    <a href="#" class="nav-link" onclick="showAuth()">Dashboard</a>
+    <a href="/download" class="nav-cta">DOWNLOAD →</a>
   </div>
 </nav>
 
@@ -85,7 +186,7 @@ footer a:hover{color:var(--white)}
     <h1>PC에서 직접<br>일하는 AI, <em>리치</em></h1>
     <p class="sub">마우스와 키보드를 직접 움직이며 XG5000, 화물 프로그램, 문서 작업을 대신합니다. 당신의 PC가 AI 직원을 얻습니다.</p>
     <div class="hero-actions">
-      <a href="#download" class="btn-main">FREE DOWNLOAD →</a>
+      <a href="#" class="btn-main" onclick="showAuth('download')">3일 무료 체험 →</a>
       <a href="#features" class="btn-outline">LEARN MORE</a>
     </div>
   </div>
@@ -102,7 +203,8 @@ footer a:hover{color:var(--white)}
   </div>
 </section>
 
-<section class="features" id="features">
+<!-- Features -->
+<section class="features-section" id="features">
   <div class="features-grid">
     <div class="feature">
       <span class="feature-icon">⚡</span>
@@ -117,11 +219,69 @@ footer a:hover{color:var(--white)}
     <div class="feature">
       <span class="feature-icon">🖥️</span>
       <div class="feature-title">PC 전권 위임</div>
-      <div class="feature-desc">앱 실행, 파일 관리, 웹 서핑, 데이터 정리까지 PC에서 할 수 있는 모든 일을 리치에게 맡기세요. WOL로 PC를 켜고 작업 완료 후 자동 종료.</div>
+      <div class="feature-desc">앱 실행, 파일 관리, 웹 서핑, 데이터 정리까지 PC에서 할 수 있는 모든 일을 리치에게 맡기세요. 텔레그램으로 명령하고 결과를 받아보세요.</div>
     </div>
   </div>
 </section>
 
+<!-- Skills Preview -->
+<section class="skills-section" id="skills">
+  <div class="skill-header">// 20 Skills Included</div>
+  <div class="skill-title">리치가 할 수 있는 일</div>
+  <div class="skills-grid">
+    <div class="skill-item"><span class="skill-icon">📝</span><span class="skill-name">문서 작성·편집</span><span class="skill-desc">AI 텍스트 생성 → 자동 입력</span></div>
+    <div class="skill-item"><span class="skill-icon">📊</span><span class="skill-name">엑셀 데이터 가공</span><span class="skill-desc">openpyxl로 데이터 처리</span></div>
+    <div class="skill-item"><span class="skill-icon">📧</span><span class="skill-name">이메일 작성·발송</span><span class="skill-desc">SMTP 연동 자동 발송</span></div>
+    <div class="skill-item"><span class="skill-icon">🌐</span><span class="skill-name">웹 검색·정보 수집</span><span class="skill-desc">검색 + 페이지 추출</span></div>
+    <div class="skill-item"><span class="skill-icon">📄</span><span class="skill-name">보고서 생성</span><span class="skill-desc">데이터 수집 → 요약 → 문서화</span></div>
+    <div class="skill-item"><span class="skill-icon">🌍</span><span class="skill-name">번역 (다국어)</span><span class="skill-desc">AI 기반 자연스러운 번역</span></div>
+    <div class="skill-item"><span class="skill-icon">📚</span><span class="skill-name">PDF 읽고 요약</span><span class="skill-desc">텍스트 추출 → AI 분석</span></div>
+    <div class="skill-item"><span class="skill-icon">👁️</span><span class="skill-name">OCR (이미지→텍스트)</span><span class="skill-desc">화면 캡처 → 텍스트 인식</span></div>
+    <div class="skill-item"><span class="skill-icon">🔍</span><span class="skill-name">파일 검색·분석</span><span class="skill-desc">시스템 검색 + AI 내용 이해</span></div>
+    <div class="skill-item"><span class="skill-icon">📈</span><span class="skill-name">주식/시세/뉴스</span><span class="skill-desc">웹 검색 + API 수집</span></div>
+    <div class="skill-item"><span class="skill-icon">💻</span><span class="skill-name">코딩·스크립트 생성</span><span class="skill-desc">Python/JS 코드 생성·실행</span></div>
+    <div class="skill-item"><span class="skill-icon">📉</span><span class="skill-name">데이터 분석·통계</span><span class="skill-desc">CSV/JSON 분석, 차트 생성</span></div>
+    <div class="skill-item"><span class="skill-icon">📅</span><span class="skill-name">일정·할일 관리</span><span class="skill-desc">텍스트 기반 + 캘린더 API</span></div>
+    <div class="skill-item"><span class="skill-icon">💬</span><span class="skill-name">메신저 발송</span><span class="skill-desc">TG/Slack API 연동</span></div>
+    <div class="skill-item"><span class="skill-icon">📋</span><span class="skill-name">클립보드 관리</span><span class="skill-desc">읽기/쓰기/히스토리</span></div>
+    <div class="skill-item"><span class="skill-icon">🖥️</span><span class="skill-name">시스템 정보 조회</span><span class="skill-desc">명령어 실행 → AI 분석</span></div>
+    <div class="skill-item"><span class="skill-icon">🔁</span><span class="skill-name">반복 작업 자동화</span><span class="skill-desc">코드 생성 + 예약 실행</span></div>
+    <div class="skill-item"><span class="skill-icon">✓</span><span class="skill-name">문법·맞춤법 검사</span><span class="skill-desc">AI 언어 분석</span></div>
+    <div class="skill-item"><span class="skill-icon">👀</span><span class="skill-name">웹사이트 변경 감지</span><span class="skill-desc">정기 fetch + 비교</span></div>
+    <div class="skill-item"><span class="skill-icon">🗄️</span><span class="skill-name">DB 쿼리·데이터 추출</span><span class="skill-desc">SQL 생성·실행</span></div>
+  </div>
+</section>
+
+<!-- Token System -->
+<section class="token-section" id="tokens">
+  <div class="token-header">// Token System</div>
+  <div class="token-grid">
+    <div class="token-info">
+      <h3>토큰 기반 사용량 관리</h3>
+      <p>OPERA AI는 토큰 시스템으로 사용량을 관리합니다. 월 토큰을 일일로 분할 지급하여 합리적으로 사용할 수 있습니다.</p>
+      <p>• 매일 자동으로 일일 토큰 지급<br>
+      • 일일 한도 소진 시 추가 토큰 구매 가능<br>
+      • 추가 구매 토큰은 다음 달로 이월 가능<br>
+      • 플랜 업그레이드 시 더 많은 일일 토큰</p>
+    </div>
+    <div>
+      <table class="token-table">
+        <tr><th>플랜</th><th>월 토큰</th><th>일일 지급</th></tr>
+        <tr><td><b>Free</b></td><td>50,000</td><td>~1,667/일</td></tr>
+        <tr><td><b>Basic</b></td><td>345,000</td><td>~11,500/일</td></tr>
+        <tr><td><b>Pro</b></td><td>545,000</td><td>~18,167/일</td></tr>
+        <tr><td><b>Enterprise</b></td><td>995,000</td><td>~33,167/일</td></tr>
+      </table>
+      <div style="margin-top:16px;font-size:12px;color:var(--muted);line-height:1.6">
+        <b style="color:var(--white)">추가 토큰 구매:</b><br>
+        10,000 토큰 — $3 · 50,000 토큰 — $14<br>
+        100,000 토큰 — $25 · 500,000 토큰 — $110
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- How It Works -->
 <section class="how-section">
   <div class="how-header">// How It Works</div>
   <div class="how-steps">
@@ -143,20 +303,22 @@ footer a:hover{color:var(--white)}
   </div>
 </section>
 
+<!-- Pricing -->
 <section class="pricing-section" id="pricing">
   <div class="pricing-header">// Plans & Pricing</div>
   <div class="pricing-grid">
     <div class="plan">
       <div class="plan-name">Free</div>
       <div class="plan-price">$0<span>/mo</span></div>
-      <div class="plan-desc">Try OPERA AI risk-free</div>
+      <div class="plan-desc">Try before you buy</div>
       <ul class="plan-feats">
-        <li>50 tasks/month</li>
+        <li>50,000 tokens/month</li>
         <li>Basic PC automation</li>
+        <li>3 skills of 20</li>
         <li>Telegram integration</li>
         <li>Community support</li>
       </ul>
-      <a href="#" class="plan-cta" onclick="alert('Coming soon!')">GET FREE →</a>
+      <a href="#" class="plan-cta" onclick="showAuth('register')">START FREE →</a>
     </div>
     <div class="plan hot">
       <div class="hot-badge">BEST SELLER</div>
@@ -164,41 +326,234 @@ footer a:hover{color:var(--white)}
       <div class="plan-price">$29<span>/mo</span></div>
       <div class="plan-desc">For professionals</div>
       <ul class="plan-feats">
+        <li>545,000 tokens/month</li>
         <li>Unlimited tasks</li>
-        <li>XG5000 automation</li>
+        <li>10 skills of 20</li>
+        <li>XG5000 full automation</li>
         <li>WOL remote control</li>
         <li>Priority support</li>
       </ul>
-      <a href="#" class="plan-cta" onclick="alert('Coming soon!')">SUBSCRIBE →</a>
+      <a href="#" class="plan-cta" style="background:var(--accent);color:var(--black);animation:glow 2s infinite" onclick="showAuth('subscribe')">💳 SUBSCRIBE →</a>
     </div>
     <div class="plan">
       <div class="plan-name">Enterprise</div>
       <div class="plan-price">$79<span>/mo</span></div>
       <div class="plan-desc">For teams & businesses</div>
       <ul class="plan-feats">
-        <li>Everything in Pro</li>
+        <li>995,000 tokens/month</li>
+        <li>All 20 skills</li>
         <li>Multi-PC management</li>
         <li>Custom automation scripts</li>
         <li>Dedicated support</li>
       </ul>
-      <a href="#" class="plan-cta" onclick="alert('Coming soon!')">CONTACT →</a>
+      <a href="#" class="plan-cta" onclick="showAuth('contact')">CONTACT →</a>
     </div>
   </div>
 </section>
 
+<!-- Comparison Table -->
+<section class="comp-section">
+  <div class="comp-header">// Detailed Plan Comparison</div>
+  <table class="comp-table">
+    <tr><th>Feature</th><th>Free</th><th>Basic</th><th>Pro</th><th>Enterprise</th></tr>
+    <tr><td>월 가격</td><td><b>$0</b></td><td><b>$69</b></td><td><b>$109</b></td><td><b>$199</b></td></tr>
+    <tr><td>연 가격 (17% 할인)</td><td>$0</td><td>$690</td><td>$1,090</td><td>$1,990</td></tr>
+    <tr><td>월 토큰</td><td>50,000</td><td>345,000</td><td>545,000</td><td>995,000</td></tr>
+    <tr><td>PC 설치 대수</td><td>1대</td><td>1대</td><td>1대</td><td>1대 + 추가 가능</td></tr>
+    <tr><td>동시 작업</td><td>1개</td><td>1개</td><td class="y">✔ 3개</td><td class="y">✔ 10개</td></tr>
+    <tr><td>자동화 루틴</td><td class="n">✘</td><td class="n">✘</td><td class="y">✔ 5개</td><td class="y">✔ 무제한</td></tr>
+    <tr><td>작업 히스토리</td><td>7일</td><td>7일</td><td>30일</td><td>1년</td></tr>
+    <tr><td>기본 스킬</td><td>3개</td><td>3개 선택</td><td>10개 선택</td><td>전체 + 커스텀</td></tr>
+    <tr><td>외부 API 연동</td><td class="n">✘</td><td class="n">✘</td><td class="y">✔ 10종</td><td class="y">✔ 무제한</td></tr>
+    <tr><td>추가 토큰 구매</td><td class="y">✔</td><td class="y">✔</td><td class="y">✔</td><td class="y">✔</td></tr>
+    <tr><td>3일 무료 체험</td><td class="y">✔</td><td class="y">✔</td><td class="y">✔</td><td class="y">✔</td></tr>
+  </table>
+</section>
+
+<!-- FAQ -->
+<section class="faq-section" id="faq">
+  <div class="faq-header">// Frequently Asked Questions</div>
+  <div class="faq-list">
+    <div><div class="faq-q" onclick="toggleFaq(this)">OPERA AI는 어떻게 동작하나요?<span class="arrow">▼</span></div><div class="faq-a">OPERA AI (리치)는 고객님의 PC에 직접 설치되어 마우스와 키보드를 실제로 움직이며 작업을 수행합니다. 텔레그램으로 명령을 내리면 리치가 PC에서 직접 실행하고 결과를 알려줍니다.</div></div>
+    <div><div class="faq-q" onclick="toggleFaq(this)">설치가 어렵나요?<span class="arrow">▼</span></div><div class="faq-a">1분이면 설치 완료됩니다. Windows나 Mac에서 설치 파일을 다운로드하여 실행하기만 하면 됩니다. 별도의 복잡한 설정이 필요하지 않습니다.</div></div>
+    <div><div class="faq-q" onclick="toggleFaq(this)">어떤 PC에서 사용할 수 있나요?<span class="arrow">▼</span></div><div class="faq-a">Windows 10/11 및 macOS 12+ (Intel 및 Apple Silicon)를 지원합니다. 최소 4GB RAM, 500MB 여유 공간이 필요합니다.</div></div>
+    <div><div class="faq-q" onclick="toggleFaq(this)">토큰은 어떻게 계산되나요?<span class="arrow">▼</span></div><div class="faq-a">모든 작업은 토큰을 소비합니다. 간단한 명령은 적은 토큰, 복잡한 분석 작업은 더 많은 토큰을 사용합니다. 일일 토큰은 매일 자동으로 지급되며, 추가 토큰을 구매할 수 있습니다.</div></div>
+    <div><div class="faq-q" onclick="toggleFaq(this)">무료 체험은 어떻게 하나요?<span class="arrow">▼</span></div><div class="faq-a">카드 등록 후 3일간 무료로 모든 Pro 기능을 체험할 수 있습니다. 3일 이내에 취소하면 요금이 청구되지 않습니다.</div></div>
+    <div><div class="faq-q" onclick="toggleFaq(this)">PC가 꺼져있을 때는 어떻게 하나요?<span class="arrow">▼</span></div><div class="faq-a">Pro 플랜 이상에서 WOL(Wake-on-LAN)을 지원합니다. 텔레그램으로 PC를 원격으로 켜고 작업을 지시할 수 있습니다. 작업 완료 후 자동으로 PC를 종료할 수도 있습니다.</div></div>
+    <div><div class="faq-q" onclick="toggleFaq(this)">보안은 안전한가요?<span class="arrow">▼</span></div><div class="faq-a">3중 방어 체계로 보호됩니다. Layer 1: 실행 명령어 블랙리스트 (rm -rf 등 차단), Layer 2: AI가 위험 요청 자동 판단 및 경고, Layer 3: 반복 위반 시 계정 정지. 모든 작업 로그가 저장되어 추적 가능합니다.</div></div>
+    <div><div class="faq-q" onclick="toggleFaq(this)">결제는 어떻게 하나요?<span class="arrow">▼</span></div><div class="faq-a">신용카드 (Visa, Mastercard), PayPal, 토스페이먼츠, 카카오페이를 지원합니다. 모든 결제는 3D Secure로 보호됩니다. 연간 결제 시 17% 할인 혜택이 있습니다.</div></div>
+  </div>
+</section>
+
+<!-- CTA -->
 <section class="cta-section" id="download">
   <h2>당신의 PC에<br><em style="color:var(--accent);font-style:normal">AI 직원</em>을 고용하세요</h2>
-  <p>지금 다운로드하고 리치에게 첫 업무를 지시해보세요.</p>
+  <p>지금 가입하고 3일 무료 체험으로 리치에게 첫 업무를 지시해보세요.<br>카드 등록만 하면 바로 시작할 수 있습니다.</p>
   <div style="display:flex;gap:16px;justify-content:center;flex-wrap:wrap">
-    <a href="#" class="btn-main" onclick="alert('Windows 버전 준비 중입니다.')">⬇ WINDOWS 다운로드</a>
-    <a href="#" class="btn-outline" onclick="alert('Mac 버전 준비 중입니다.')">⬇ MAC 다운로드</a>
+    <a href="#" class="btn-main" onclick="showAuth('register')">3일 무료 체험 시작 →</a>
+    <a href="#" class="btn-outline" onclick="showAuth('login')">기존 회원 로그인</a>
   </div>
-  <div style="margin-top:24px;font-size:12px;color:var(--muted)">Windows 10+ / macOS 12+ · 50MB · 1분 설치</div>
+  <div style="margin-top:24px;font-size:12px;color:var(--muted)">
+    Windows 10+ / macOS 12+ · 50MB · 1분 설치 · 카드 등록으로 3일 무료
+  </div>
 </section>
 
 <footer>
   <div>OPERA_AI © 2026</div>
-  <div><a href="/privacy">Privacy</a> · <a href="/terms">Terms</a> · <a href="https://workbotai.net">WORKBOT AI</a></div>
+  <div>
+    <a href="/dashboard">Dashboard</a> · 
+    <a href="/download">Download</a> · 
+    <a href="/docs">Docs</a> · 
+    <a href="/privacy">Privacy</a> · 
+    <a href="/terms">Terms</a> · 
+    <a href="https://workbotai.net" target="_blank">WORKBOT AI</a>
+  </div>
 </footer>
+
+<!-- Auth Modal -->
+<div class="modal" id="authModal">
+  <div class="modal-box">
+    <button class="modal-close" onclick="hideAuth()">✕</button>
+    <div id="authContent"></div>
+  </div>
+</div>
+
+<script>
+// FAQ Toggle
+function toggleFaq(el) {
+  el.classList.toggle('active');
+  var answer = el.nextElementSibling;
+  answer.classList.toggle('open');
+}
+
+// Auth Modal
+function showAuth(mode) {
+  document.getElementById('authModal').classList.add('show');
+  var content = document.getElementById('authContent');
+  if (mode === 'login') {
+    content.innerHTML = '<h2>Login</h2><p>Welcome back to OPERA AI</p>' +
+      '<div class="modal-field"><label>Email</label><input type="email" id="loginEmail" placeholder="you@email.com"></div>' +
+      '<div class="modal-field"><label>Password</label><input type="password" id="loginPass" placeholder="••••••••"></div>' +
+      '<button class="modal-btn" onclick="login()">LOGIN</button>' +
+      '<div class="modal-switch">No account? <a onclick="showAuth(\'register\')">Create one</a></div>';
+  } else if (mode === 'register' || mode === 'download') {
+    content.innerHTML = '<h2>3-Day Free Trial</h2><p>3일간 Pro 기능을 무료로 체험하세요. 3일 이내 취소 시 요금 없음.</p>' +
+      '<div class="modal-field"><label>Email</label><input type="email" id="regEmail" placeholder="you@email.com"></div>' +
+      '<div class="modal-field"><label>Password</label><input type="password" id="regPass" placeholder="최소 8자"></div>' +
+      '<button class="modal-btn" onclick="register()">3-DAY FREE TRIAL START →</button>' +
+      '<div class="modal-switch">Already have an account? <a onclick="showAuth(\'login\')">Login</a></div>' +
+      '<div style="margin-top:12px;font-size:10px;color:var(--muted);text-align:center">3일 후 Free 플랜 전환 · <a onclick="showAuth(\'subscribe\')" style="color:var(--accent);cursor:pointer">정식 구독하기 →</a></div>';
+  } else if (mode === 'subscribe') {
+    content.innerHTML = '<h2>Choose Your Plan</h2><p>Select a subscription plan below</p>' +
+      '<div class="modal-plan" onclick="selectPlan(this,\'basic\')"><div><div class="modal-pname">Basic</div><div style="font-size:11px;color:var(--muted)">345,000 tokens/mo</div></div><div class="modal-pprice">$69/mo</div></div>' +
+      '<div class="modal-plan selected" onclick="selectPlan(this,\'pro\')"><div><div class="modal-pname">Pro ★</div><div style="font-size:11px;color:var(--muted)">545,000 tokens/mo</div></div><div class="modal-pprice">$109/mo</div></div>' +
+      '<div class="modal-plan" onclick="selectPlan(this,\'enterprise\')"><div><div class="modal-pname">Enterprise</div><div style="font-size:11px;color:var(--muted)">995,000 tokens/mo</div></div><div class="modal-pprice">$199/mo</div></div>' +
+      '<div style="margin-top:16px"><label class="modal-field" style="display:block;font-size:11px;font-family:\'Space Mono\',monospace;color:var(--muted);margin-bottom:8px;text-transform:uppercase;letter-spacing:1px">Billing</label>' +
+      '<div style="display:flex;gap:8px">' +
+      '<div class="modal-plan" style="flex:1" onclick="selectBilling(this,\'monthly\')"><div style="text-align:center"><div class="modal-pname">Monthly</div><div style="font-size:11px;color:var(--muted)">No discount</div></div></div>' +
+      '<div class="modal-plan selected" style="flex:1" onclick="selectBilling(this,\'yearly\')"><div style="text-align:center"><div class="modal-pname">Yearly</div><div style="font-size:11px;color:var(--accent)">-17% OFF</div></div></div>' +
+      '</div></div>' +
+      '<button class="modal-btn" id="paypalBtn" onclick="paypalSubscribe()">💳 PAY WITH PAYPAL →</button>' +
+      '<div id="paypalLoading" style="display:none;text-align:center;padding:20px;color:var(--muted);font-size:13px">⏳ Connecting to PayPal...</div>' +
+      '<div class="modal-switch">Already subscribed? <a href="/dashboard">Dashboard</a></div>';
+    selectedPlan = 'pro';
+    selectedBilling = 'yearly';
+  } else if (mode === 'contact') {
+    content.innerHTML = '<h2>Enterprise Contact</h2><p>기업 고객 문의는 아래 연락처로 부탁드립니다.</p>' +
+      '<div style="padding:20px 0;color:var(--muted);line-height:2;font-size:14px">' +
+      '📧 enterprise@operaai.net<br>' +
+      '📞 Contact via Telegram<br>' +
+      '💬 <a href="https://workbotai.net" style="color:var(--accent)" target="_blank">WORKBOT AI</a></div>';
+  }
+}
+function hideAuth() {
+  document.getElementById('authModal').classList.remove('show');
+}
+var selectedPlan = 'pro';
+var selectedBilling = 'yearly';
+function selectPlan(el, plan) {
+  document.querySelectorAll('.modal-plan').forEach(function(e){ e.classList.remove('selected'); });
+  el.classList.add('selected');
+  selectedPlan = plan;
+}
+function selectBilling(el, billing) {
+  document.querySelectorAll('.modal-plan').forEach(function(e){ e.classList.remove('selected'); });
+  el.classList.add('selected');
+  selectedBilling = billing;
+}
+
+async function paypalSubscribe() {
+  var btn = document.getElementById('paypalBtn');
+  var loading = document.getElementById('paypalLoading');
+  btn.style.display = 'none';
+  loading.style.display = 'block';
+  try {
+    var r = await fetch('/api/paypal/create-order', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({
+        plan: selectedPlan,
+        billing: selectedBilling,
+        quantity: 1,
+        return_url: window.location.origin + '/payment/success',
+        cancel_url: window.location.origin + '/payment/cancel'
+      })
+    });
+    var data = await r.json();
+    if (data.approval_url) {
+      window.location.href = data.approval_url;
+    } else if (data.fallback) {
+      alert('✅ ' + data.message);
+      hideAuth();
+    } else {
+      alert('❌ PayPal error: ' + (data.error || 'Unknown'));
+      btn.style.display = 'block';
+      loading.style.display = 'none';
+    }
+  } catch(e) {
+    alert('❌ Connection error: ' + e.message);
+    btn.style.display = 'block';
+    loading.style.display = 'none';
+  }
+}
+
+// API Calls
+async function login() {
+  var email = document.getElementById('loginEmail')?.value;
+  var pass = document.getElementById('loginPass')?.value;
+  if (!email || !pass) { alert('Please fill in all fields'); return; }
+  try {
+    var r = await fetch('/api/auth/login', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({email: email, password: pass})
+    });
+    var data = await r.json();
+    if (data.error) { alert('Login failed: ' + data.error); return; }
+    localStorage.setItem('opera_token', data.token);
+    alert('✅ Login successful!');
+    hideAuth();
+    window.location.href = '/dashboard';
+  } catch(e) { alert('Connection error: ' + e.message); }
+}
+
+async function register() {
+  var email = document.getElementById('regEmail')?.value;
+  var pass = document.getElementById('regPass')?.value;
+  if (!email || !pass) { alert('Please fill in all fields'); return; }
+  try {
+    var r = await fetch('/api/auth/register', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({email: email, password: pass, plan: 'trial'})
+    });
+    var data = await r.json();
+    if (data.error) { alert('Registration failed: ' + data.error); return; }
+    localStorage.setItem('opera_token', data.token);
+    alert('✅ Welcome to OPERA AI! Check your email for download link.');
+    hideAuth();
+  } catch(e) { alert('Connection error: ' + e.message); }
+}
+</script>
 </body>
 </html>
