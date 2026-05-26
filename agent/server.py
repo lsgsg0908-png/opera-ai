@@ -518,14 +518,143 @@ def _route_action(action, params):
 
 # ── AI 처리 ──
 
+# ── DeepSeek API (서버 전용, 키 보호) ──
+import os as _os
+_ENV = {}
+_env_path = BASE_DIR / ".env"
+if _env_path.exists():
+    for _line in _env_path.read_text().strip().split("\n"):
+        if "=" in _line and not _line.startswith("#"):
+            _k, _v = _line.split("=", 1)
+            _ENV[_k.strip()] = _v.strip()
+
+_DEEPSEEK_KEY = _ENV.get("DEEPSEEK_API_KEY", "")
+_DEEPSEEK_URL = "https://api.deepseek.com/chat/completions"
+_DS_MODELS = {"fast": "deepseek-v4-flash", "deep": "deepseek-v4-flash", "expert": "deepseek-v4-flash"}
+_DS_MAX_TOKENS = {"fast": 1024, "deep": 4096, "expert": 8192}
+_DS_TEMPS = {"fast": 0.3, "deep": 0.1, "expert": 0.05}
+_DS_SYSTEM = "당신은 OPERA AI(리치)입니다. PC 작업을 자동화하는 AI 비서입니다. 사용자의 명령을 분석하고 적절히 응답하거나 작업을 실행합니다. 한국어로 응답하고, 불필요한 설명 없이 핵심만 전달합니다."
+
+
+def _ds_chat(messages, mode="fast"):
+    """DeepSeek API 호출 (내부용)"""
+    import requests as _req
+    try:
+        resp = _req.post(_DEEPSEEK_URL, json={
+            "model": _DS_MODELS.get(mode, "deepseek-chat"),
+            "messages": messages,
+            "max_tokens": _DS_MAX_TOKENS.get(mode, 1024),
+            "temperature": _DS_TEMPS.get(mode, 0.3),
+            "stream": False,
+        }, headers={
+            "Authorization": f"Bearer {_DEEPSEEK_KEY}",
+            "Content-Type": "application/json",
+        }, timeout=30)
+        if resp.ok:
+            data = resp.json()
+            usage = data.get("usage", {})
+            content = data.get("choices", [{}])[0].get("message", {}).get("content", "")
+            return content, usage.get("total_tokens", 0), None
+        return None, 0, f"DeepSeek {resp.status_code}: {resp.text[:200]}"
+    except Exception as e:
+        return None, 0, str(e)
+
+
+@app.route("/api/deepseek/chat", methods=["POST"])
+def api_deepseek_proxy():
+    """DeepSeek API 프록시 — 클라이언트가 호출 (API 키 서버에만 보관)"""
+    data = request.get_json(silent=True) or {}
+    prompt = data.get("prompt", "")
+    mode = data.get("mode", "fast")
+    messages = data.get("messages")
+    
+    if not prompt and not messages:
+        return jsonify({"error": "prompt required"}), 400
+    
+    # 사용량 체크 (인증된 사용자)
+    user = None
+    auth = request.headers.get("Authorization", "")
+    if auth.startswith("Bearer "):
+        try:
+            from core.user_manager import authenticate
+            user = authenticate(request)
+        except:
+            pass
+    
+    if not messages:
+        messages = [
+            {"role": "system", "content": _DS_SYSTEM},
+            {"role": "user", "content": prompt},
+        ]
+    
+    content, tokens, err = _ds_chat(messages, mode)
+    if err:
+        _log_history("ds_proxy_error", err[:100], {}, 0)
+        return jsonify({"error": err}), 502
+    
+    # 토큰 추적
+    from core.token_manager import consume_tokens, get_actual_cost
+    cost = get_actual_cost(tokens)
+    consume_tokens(tokens)
+    _log_history("ds_proxy", prompt[:100], {"tokens": tokens, "cost": cost}, tokens)
+    
+    # 작업 명령 파싱
+    commands = _parse_ai_commands(content, prompt)
+    
+    return jsonify({
+        "status": "ok",
+        "response": content,
+        "commands": commands,
+        "tokens_used": tokens,
+        "actual_cost": cost,
+        "model": _DS_MODELS.get(mode),
+    })
+
+
 def _ai_process(prompt, mode="fast"):
-    """AI 명령 처리"""
+    """로컬 AI 명령 처리 (서버 자체용, 프록시 재사용)"""
+    messages = [
+        {"role": "system", "content": _DS_SYSTEM},
+        {"role": "user", "content": prompt},
+    ]
+    content, tokens, err = _ds_chat(messages, mode)
+    if err:
+        _log_history("ai_error", err[:100], {}, 0)
+        return {"status": "error", "error": f"AI 오류: {err}"}
+    
+    from core.token_manager import consume_tokens, get_actual_cost
+    cost = get_actual_cost(tokens)
+    consume_tokens(tokens)
+    commands = _parse_ai_commands(content, prompt)
+    _log_history("ai_chat", prompt[:100], {"tokens": tokens, "cost": cost}, tokens)
+    
     return {
-        "status": "ai_request",
-        "prompt": prompt[:500],
+        "status": "ok",
+        "response": content,
+        "commands": commands,
+        "tokens_used": tokens,
+        "actual_cost": cost,
+        "model": _DS_MODELS.get(mode),
         "mode": mode,
-        "note": "DeepSeek API 호출 (workbot-ai 연동 필요)"
     }
+
+
+def _parse_ai_commands(ai_response, original_prompt):
+    """AI 응답에서 실행 명령 추출 (최적화: 정규식 최소화)"""
+    import re
+    commands = []
+    # 형식: [ACTION:액션명:파라미터]
+    pattern = r'\[ACTION:([a-z_]+):([^\]]+)\]'
+    for match in re.finditer(pattern, ai_response):
+        action = match.group(1)
+        params_str = match.group(2)
+        try:
+            import json
+            params = json.loads(params_str)
+        except:
+            params = {"text": params_str}
+        commands.append({"action": action, "params": params})
+    return commands
 
 
 # ── API: 토큰 ──

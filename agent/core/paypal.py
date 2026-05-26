@@ -20,11 +20,19 @@ PAYPAL_LIVE = "https://api-m.paypal.com"
 
 # ── 설정 ──
 
+_ENV = {}
+_env_path = Path(__file__).parent.parent / ".env"
+if _env_path.exists():
+    for _line in _env_path.read_text().strip().split("\n"):
+        if "=" in _line and not _line.startswith("#"):
+            _k, _v = _line.split("=", 1)
+            _ENV[_k.strip()] = _v.strip()
+
 _DEFAULT_CONFIG = {
-    "client_id": "Afj9-a7rHy2IUvdr5wFSO2GIiVSLdx7cjisiJtB_cybJThcly_GQaXhGT9M3kG4qGm10G7TS4qpOzsgk",
-    "secret": "ENyQ4x-kwCHiBRvziqEmw1D80t4tCBelmOIkKv01Epxi82KuMyoxNoBqOaiI8fXYsD4b9XbN_pKdFVAS",
-    "webhook_id": "9D656508VH3521154",
-    "mode": "live",  # "sandbox" | "live"
+    "client_id": _ENV.get("PAYPAL_CLIENT_ID", ""),
+    "secret": _ENV.get("PAYPAL_SECRET", ""),
+    "webhook_id": _ENV.get("PAYPAL_WEBHOOK_ID", ""),
+    "mode": "live",
     "enabled": True,
 }
 
