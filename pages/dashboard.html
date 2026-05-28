@@ -1,76 +1,540 @@
 <!DOCTYPE html>
-<html lang="ko">
+<html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>OPERA AI — Dashboard</title>
-<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Dashboard — OPERA AI</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
 <style>
-*{box-sizing:border-box;margin:0;padding:0}
-:root{--black:#080808;--white:#f4f4f0;--gray:#111;--gray2:#1a1a1a;--muted:#888;--accent:#c8ff00;--green:#22d3a0;--red:#ff5a5a;--border:#222}
-body{background:var(--black);color:var(--white);font-family:'Space Grotesk',sans-serif;font-size:14px;min-height:100vh}
-nav{display:flex;align-items:center;justify-content:space-between;padding:20px 40px;border-bottom:1px solid var(--border);background:rgba(8,8,8,.95)}
-.logo{font-family:'Space Mono',monospace;font-size:13px;font-weight:700;letter-spacing:2px;color:var(--white)}
-.logo span{color:var(--accent)}
-.dash{display:flex;min-height:calc(100vh-66px)}
-.sidebar{width:240px;border-right:1px solid var(--border);padding:24px 0;flex-shrink:0}
-.side-item{padding:12px 24px;color:var(--muted);font-size:13px;cursor:pointer;transition:all .2s;border-left:2px solid transparent}
-.side-item:hover{color:var(--white);background:var(--gray)}
-.side-item.active{color:var(--accent);border-left-color:var(--accent);background:rgba(200,255,0,.05)}
-.main{flex:1;padding:32px 40px;overflow-y:auto}
-h1{font-size:24px;font-weight:700;margin-bottom:24px}
-.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:16px;margin-bottom:32px}
-.card{padding:24px;background:var(--gray);border:1px solid var(--border);border-radius:0}
-.card b{display:block;font-size:28px;font-weight:700;color:var(--accent);margin-bottom:4px}
-.card small{color:var(--muted);font-size:12px}
-.card .label{font-size:11px;font-family:'Space Mono',monospace;color:var(--muted);margin-bottom:12px;letter-spacing:1px}
-.section{margin-bottom:40px}
-.section h2{font-size:16px;font-weight:500;margin-bottom:16px;color:var(--muted)}
-.table{width:100%;border-collapse:collapse;font-size:13px}
-.table th,.table td{padding:10px 16px;text-align:left;border-bottom:1px solid var(--border)}
-.table th{font-family:'Space Mono',monospace;font-size:10px;color:var(--accent);letter-spacing:1px}
-.table td{color:var(--muted)}
-.status-dot{width:8px;height:8px;border-radius:50%;display:inline-block;margin-right:6px}
-.dot-green{background:var(--green)}
-.dot-yellow{background:#f0b429}
-.dot-red{background:var(--red)}
-.btn-small{font-family:'Space Mono',monospace;font-size:9px;padding:6px 12px;background:var(--accent);color:var(--black);border:none;cursor:pointer;letter-spacing:1px}
-@media(max-width:768px){.sidebar{display:none}.main{padding:20px}}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#11100e;--bg2:#181613;--surface:#1d1b18;--surface2:#23211d;--border:#2b2824;--border-light:#34312c;
+  --ink:#f0ece4;--ink2:#b8ae9e;--ink3:#817768;--green:#4ade80;--green-bg:rgba(74,222,128,.1);
+  --green-border:rgba(74,222,128,.2);--accent:#6c5ce7;--amber:#f0b429;--red:#ef4444;
+  --radius:16px;--radius-sm:10px;--radius-round:100px;
+  --font:'Inter',system-ui,-apple-system,sans-serif;
+}
+html{background:var(--bg);color:var(--ink);font-family:var(--font);-webkit-font-smoothing:antialiased;height:100%}
+body{height:100%;display:flex;flex-direction:column}
+a{color:inherit;text-decoration:none}
+::selection{background:var(--green);color:#11100e}
+
+nav{display:flex;align-items:center;justify-content:space-between;padding:0 28px;height:60px;border-bottom:1px solid var(--border);background:rgba(17,16,14,.95);flex-shrink:0}
+.logo{display:flex;align-items:center;gap:10px;cursor:pointer}
+.logo-icon{width:28px;height:28px;border-radius:8px;background:var(--green);display:grid;place-items:center;font-size:13px;font-weight:900;color:#11100e}
+.logo-text{font-size:15px;font-weight:800;letter-spacing:-.02em}
+.logo-text span{font-size:9px;font-weight:600;color:var(--ink3);letter-spacing:.05em;display:block;margin-top:-1px}
+.nav-right{display:flex;align-items:center;gap:20px}
+.nav-link{font-size:13px;font-weight:600;color:var(--ink2);transition:color .15s}
+.nav-link:hover{color:var(--ink)}
+.user-badge{display:flex;align-items:center;gap:8px;font-size:12px;font-weight:600;color:var(--ink2);padding:6px 12px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-round)}
+.user-badge .plan-badge{font-size:9px;font-weight:800;background:var(--green-bg);color:var(--green);padding:2px 8px;border-radius:var(--radius-round);text-transform:uppercase}
+
+.dash-layout{display:flex;flex:1;overflow:hidden}
+.sidebar{width:220px;border-right:1px solid var(--border);padding:16px 0;flex-shrink:0;display:flex;flex-direction:column;background:var(--bg2)}
+.side-menu{flex:1;overflow-y:auto}
+.side-item{display:flex;align-items:center;gap:10px;padding:11px 20px;font-size:14px;font-weight:600;color:var(--ink3);cursor:pointer;transition:all .15s;border-left:2px solid transparent}
+.side-item:hover{color:var(--ink);background:var(--surface)}
+.side-item.active{color:var(--green);border-left-color:var(--green);background:var(--green-bg)}
+.side-item .si-icon{font-size:16px;width:20px;text-align:center;flex-shrink:0}
+.side-logout{margin-top:auto;padding:16px 20px;border-top:1px solid var(--border);display:flex;align-items:center;gap:8px;font-size:13px;font-weight:600;color:var(--ink3);cursor:pointer;transition:.15s}
+.side-logout:hover{color:var(--red)}
+
+.main{flex:1;padding:28px 32px;overflow-y:auto}
+.main h1{font-size:30px;font-weight:900;letter-spacing:-.02em;margin-bottom:6px}
+.main .page-sub{font-size:14px;color:var(--ink3);margin-bottom:24px;font-weight:500}
+
+/* Cards */
+.stat-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:14px;margin-bottom:28px}
+.stat-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:22px 24px;transition:.2s}
+.stat-card:hover{border-color:var(--border-light)}
+.stat-card .sc-label{font-size:11px;font-weight:700;color:var(--ink3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:8px}
+.stat-card .sc-value{font-size:30px;font-weight:900;letter-spacing:-.02em;line-height:1}
+.stat-card .sc-value small{font-size:13px;font-weight:600;color:var(--ink3)}
+.stat-card .sc-sub{font-size:12px;color:var(--ink2);margin-top:4px;font-weight:500}
+.stat-card .sc-green{color:var(--green)}
+.stat-card .sc-accent{color:var(--accent)}
+.stat-card .sc-amber{color:var(--amber)}
+
+/* Page sections */
+.page-section{display:none}
+.page-section.active{display:block}
+
+/* Info card */
+.info-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:24px}
+.info-row{display:flex;justify-content:space-between;padding:12px 0;border-bottom:1px solid var(--border);font-size:14px}
+.info-row:last-child{border-bottom:none}
+.info-row .ir-label{color:var(--ink3);font-weight:600}
+.info-row .ir-value{font-weight:700;color:var(--ink)}
+
+/* Skill grid */
+.skill-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.skill-card{display:flex;align-items:center;gap:14px;padding:16px 18px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-sm);transition:.2s}
+.skill-card:hover{border-color:var(--border-light)}
+.skill-card .sk-icon{width:36px;height:36px;border-radius:8px;display:grid;place-items:center;font-size:16px;flex-shrink:0}
+.skill-card .sk-info{flex:1}
+.skill-card .sk-info b{display:block;font-size:14px;font-weight:700}
+.skill-card .sk-info span{font-size:11px;color:var(--ink3)}
+.skill-card .sk-status{font-size:10px;font-weight:700;padding:3px 10px;border-radius:var(--radius-round);flex-shrink:0}
+
+/* Empty state */
+.empty-state{text-align:center;padding:48px 20px;color:var(--ink3)}
+.empty-state .empty-icon{font-size:40px;margin-bottom:12px}
+.empty-state h3{font-size:16px;font-weight:700;color:var(--ink2);margin-bottom:6px}
+.empty-state p{font-size:13px;line-height:1.5}
+.empty-state .btn{margin-top:16px}
+
+/* Message */
+.msg-box{padding:12px 16px;border-radius:var(--radius-sm);font-size:13px;font-weight:600;margin-bottom:16px}
+.msg-box.error{background:#1f1111;color:#f87171;border:1px solid rgba(239,68,68,.25)}
+.msg-box.success{background:#0d2818;color:#4ade80;border:1px solid rgba(74,222,128,.25)}
+.msg-box.info{background:#0d1b2a;color:#60a5fa;border:1px solid rgba(59,130,246,.25)}
+.msg-box.loading{background:var(--surface);color:var(--ink2);border:1px solid var(--border)}
+
+/* Buttons */
+.btn{display:inline-flex;align-items:center;gap:8px;padding:12px 24px;border-radius:var(--radius-round);font-size:13px;font-weight:700;border:none;cursor:pointer;font-family:inherit;transition:all .2s}
+.btn-green{background:var(--green);color:#11100e}
+.btn-green:hover{background:#65e894;transform:translateY(-1px)}
+.btn-ghost{background:transparent;color:var(--ink);border:1px solid var(--border)}
+.btn-ghost:hover{border-color:var(--border-light);background:var(--surface)}
+
+.btn-sm{padding:8px 16px;font-size:12px}
+
+/* Responsive */
+@media(max-width:768px){
+  .sidebar{width:60px}
+  .side-item span{display:none}
+  .side-logout span{display:none}
+  .main{padding:20px 16px}
+  .stat-grid{grid-template-columns:1fr 1fr}
+  .skill-grid{grid-template-columns:1fr}
+  nav{padding:0 16px}
+}
+@media(max-width:480px){
+  .stat-grid{grid-template-columns:1fr}
+  .user-badge{display:none}
+}
 </style>
 </head>
 <body>
+
 <nav>
-  <a href="/" class="logo">OPERA<span>_AI</span> <span style="font-size:10px;color:var(--muted);letter-spacing:0">Dashboard</span></a>
-  <div><a href="/" style="color:var(--muted);text-decoration:none;font-size:12px">← Back to Site</a></div>
-</nav>
-<div class="dash">
-  <div class="sidebar">
-    <div class="side-item active">📊 Overview</div>
-    <div class="side-item">🤖 Agents</div>
-    <div class="side-item">📋 Tasks</div>
-    <div class="side-item">⚙️ Skills</div>
-    <div class="side-item">🪙 Tokens</div>
-    <div class="side-item">🔧 Settings</div>
+  <a class="logo" href="/">
+    <div class="logo-icon">O</div>
+    <div class="logo-text">OPERA AI<span>Dashboard</span></div>
+  </a>
+  <div class="nav-right">
+    <div class="user-badge" id="userBadge">
+      <span id="userEmail">Loading...</span>
+      <span class="plan-badge" id="planBadge">trial</span>
+    </div>
+    <a class="nav-link" href="/">← Back to Site</a>
   </div>
-  <div class="main">
-    <h1>Dashboard</h1>
-    <div class="grid">
-      <div class="card"><div class="label">STATUS</div><b><span class="status-dot dot-green"></span>Online</b><small>Agent running</small></div>
-      <div class="card"><div class="label">TOKENS TODAY</div><b>8,450</b><small>of 15,000 used</small></div>
-      <div class="card"><div class="label">TASKS TODAY</div><b>12</b><small>completed</small></div>
-      <div class="card"><div class="label">PC UPTIME</div><b>3d 14h</b><small>last WOL: n/a</small></div>
+</nav>
+
+<div class="dash-layout">
+  <div class="sidebar">
+    <div class="side-menu">
+      <div class="side-item active" data-tab="overview"><span class="si-icon">📊</span><span>Overview</span></div>
+      <div class="side-item" data-tab="agents"><span class="si-icon">🤖</span><span>Agents</span></div>
+      <div class="side-item" data-tab="tasks"><span class="si-icon">📋</span><span>Tasks</span></div>
+      <div class="side-item" data-tab="skills"><span class="si-icon">⚙️</span><span>Skills</span></div>
+      <div class="side-item" data-tab="credits"><span class="si-icon">🪙</span><span>Execution Credits</span></div>
+      <div class="side-item" data-tab="settings"><span class="si-icon">🔧</span><span>Settings</span></div>
     </div>
-    <div class="section">
-      <h2>Recent Tasks</h2>
-      <table class="table">
-        <tr><th>Task</th><th>Status</th><th>Time</th><th></th></tr>
-        <tr><td>📊 엑셀 데이터 정리</td><td><span class="status-dot dot-green"></span>Completed</td><td>2m ago</td><td><button class="btn-small">VIEW</button></td></tr>
-        <tr><td>📄 보고서 생성</td><td><span class="status-dot dot-green"></span>Completed</td><td>15m ago</td><td><button class="btn-small">VIEW</button></td></tr>
-        <tr><td>🌐 웹 검색: 시장 동향</td><td><span class="status-dot dot-yellow"></span>Running</td><td>now</td><td><button class="btn-small">VIEW</button></td></tr>
-        <tr><td>📧 이메일 발송</td><td><span class="status-dot dot-green"></span>Completed</td><td>1h ago</td><td><button class="btn-small">VIEW</button></td></tr>
-      </table>
+    <div class="side-logout" onclick="doLogout()">
+      <span style="font-size:15px">🚪</span><span>Log Out</span>
     </div>
+  </div>
+
+  <div class="main" id="mainContent">
+    <div class="msg-box loading" id="loadMsg">⏳ Loading your dashboard...</div>
   </div>
 </div>
+
+<script>
+// ─── Auth Check ───
+var token = localStorage.getItem('opera_token');
+if (!token) { window.location.href = '/'; }
+
+var API = ''; // same origin
+
+// ─── State ───
+var userData = null;
+var tokenData = null;
+var taskData = null;
+
+// ─── Init ───
+document.addEventListener('DOMContentLoaded', function() {
+  loadAllData();
+  setupSidebar();
+});
+
+function setupSidebar() {
+  document.querySelectorAll('.side-item').forEach(function(el) {
+    el.addEventListener('click', function() {
+      document.querySelectorAll('.side-item').forEach(function(e) { e.classList.remove('active'); });
+      el.classList.add('active');
+      switchTab(el.dataset.tab);
+    });
+  });
+}
+
+function switchTab(tab) {
+  var content = document.getElementById('mainContent');
+  var renderers = {
+    overview: renderOverview,
+    agents: renderAgents,
+    tasks: renderTasks,
+    skills: renderSkills,
+    credits: renderCredits,
+    settings: renderSettings
+  };
+  if (renderers[tab]) renderers[tab]();
+}
+
+function showLoading(msg) {
+  document.getElementById('loadMsg').style.display = 'block';
+  document.getElementById('loadMsg').textContent = msg || '⏳ Loading...';
+}
+function hideLoading() {
+  document.getElementById('loadMsg').style.display = 'none';
+}
+
+function setContent(html) {
+  document.getElementById('mainContent').innerHTML = html;
+}
+
+function showError(msg) {
+  setContent('<div class="msg-box error">⚠️ ' + msg + '</div>');
+}
+
+// ─── API Calls ───
+function apiGet(path) {
+  return fetch(API + path, {
+    headers: { 'Authorization': 'Bearer ' + token }
+  }).then(function(r) { return r.json(); });
+}
+
+function loadAllData() {
+  showLoading('⏳ Loading your dashboard...');
+
+  Promise.all([
+    apiGet('/api/me'),
+    apiGet('/api/tokens'),
+    apiGet('/api/tasks')
+  ]).then(function(results) {
+    var meResult = results[0];
+    var tokResult = results[1];
+    var taskResult = results[2];
+
+    if (meResult.ok === false || !meResult.user) {
+      localStorage.removeItem('opera_token');
+      window.location.href = '/';
+      return;
+    }
+
+    userData = meResult.user;
+    tokenData = tokResult;
+    taskData = taskResult;
+
+    // Update nav badge
+    document.getElementById('userEmail').textContent = userData.email;
+    document.getElementById('planBadge').textContent = userData.plan;
+
+    hideLoading();
+    renderOverview();
+  }).catch(function(err) {
+    showError('Could not load dashboard. <a href="javascript:location.reload()" style="color:var(--green)">Try again</a>');
+  });
+}
+
+// ─── Render: Overview ───
+function renderOverview() {
+  var u = userData, tk = tokenData, tsk = taskData;
+  var remaining = tk ? (tk.total_available || tk.today_remaining || 0) : '—';
+  var usedToday = tk ? (tk.today_used || 0) : '—';
+  var dailyMax = tk ? (tk.daily_allowance || '—') : '—';
+  var tasksAvail = tsk ? (tsk.available || 0) : '—';
+  var queueLen = tsk ? (tsk.queue_length || 0) : '—';
+
+  var planLabel = u.plan.charAt(0).toUpperCase() + u.plan.slice(1);
+
+  var trialInfo = '';
+  if (u.plan === 'trial' && u.trial_end) {
+    var end = new Date(u.trial_end);
+    var now = new Date();
+    var daysLeft = Math.ceil((end - now) / (1000*60*60*24));
+    trialInfo = '<div class="msg-box info">🎁 ' + daysLeft + '-day trial · ' + end.toLocaleDateString('en-US', {month:'short', day:'numeric'}) + '</div>';
+  }
+
+  var rtIcon = '🟢';
+  var rtLabel = 'Runtime Online';
+  var gpuLabel = 'Not detected';
+  var wsCount = '—';
+  var workerLabel = '—';
+
+  // Try to show runtime status from cached devices
+  if (cachedDevices && cachedDevices.length > 0) {
+    wsCount = cachedDevices.length;
+    var activeWs = cachedDevices.filter(function(d) { return d.active !== false; }).length;
+    gpuLabel = cachedDevices[0].gpu_name || 'Detected';
+    rtLabel = activeWs > 0 ? 'Runtime Online' : 'Runtime Idle';
+    workerLabel = queueLen > 0 ? queueLen + ' workers active' : 'Standing by';
+  } else {
+    // Fetch devices if not cached
+    var t = localStorage.getItem('opera_token');
+    if (t && !cachedDevices) {
+      fetch('/api/devices', { headers: { 'Authorization': '***' + t } })
+        .then(function(r) { return r.json(); }).then(function(d) {
+          if (d.ok) {
+            cachedDevices = d.devices;
+            renderOverview(); // re-render with device data
+          }
+        }).catch(function() {});
+    }
+  }
+
+  var html =
+    '<h1>Overview</h1><div class="page-sub">Runtime Control Center</div>' +
+    trialInfo +
+
+    /* ── Runtime Status Bar ── */ +
+    '<div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:10px;margin-bottom:20px">' +
+      '<div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-sm);padding:14px 16px;display:flex;align-items:center;gap:10px">' +
+        '<span style="font-size:20px">🟢</span>' +
+        '<div><b style="font-size:13px;display:block">Runtime</b><span style="font-size:11px;color:var(--ink3)">' + rtLabel + '</span></div></div>' +
+      '<div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-sm);padding:14px 16px;display:flex;align-items:center;gap:10px">' +
+        '<span style="font-size:20px">🎮</span>' +
+        '<div><b style="font-size:13px;display:block">GPU</b><span style="font-size:11px;color:var(--ink3)">' + gpuLabel + '</span></div></div>' +
+      '<div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-sm);padding:14px 16px;display:flex;align-items:center;gap:10px">' +
+        '<span style="font-size:20px">⚡</span>' +
+        '<div><b style="font-size:13px;display:block">AI Workers</b><span style="font-size:11px;color:var(--ink3)">' + workerLabel + '</span></div></div>' +
+      '<div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-sm);padding:14px 16px;display:flex;align-items:center;gap:10px">' +
+        '<span style="font-size:20px">🖥️</span>' +
+        '<div><b style="font-size:13px;display:block">Workstations</b><span style="font-size:11px;color:var(--ink3)">' + (wsCount !== '—' ? wsCount + ' connected' : '—') + '</span></div></div>' +
+    '</div>' +
+
+    '<div class="stat-grid">' +
+      '<div class="stat-card"><div class="sc-label">Plan</div><div class="sc-value sc-green">' + planLabel + '</div><div class="sc-sub">' + u.email + '</div></div>' +
+      '<div class="stat-card"><div class="sc-label">Execution Credits</div><div class="sc-value sc-accent">' + remaining + ' <small>credits</small></div><div class="sc-sub">' + usedToday + ' used today · ' + dailyMax + ' daily</div></div>' +
+      '<div class="stat-card"><div class="sc-label">Task Slots</div><div class="sc-value sc-amber">' + tasksAvail + ' <small>available</small></div><div class="sc-sub">' + queueLen + ' in queue</div></div>' +
+      '<div class="stat-card"><div class="sc-label">Status</div><div class="sc-value' + (u.verified ? ' sc-green' : '') + '">' + (u.verified ? 'Verified' : 'Pending') + '</div><div class="sc-sub">Joined ' + new Date(u.created_at).toLocaleDateString('en-US', {month:'short', day:'numeric', year:'numeric'}) + '</div></div>' +
+    '</div>' +
+    '<div class="info-card"><div class="info-row"><span class="ir-label">Email</span><span class="ir-value">' + u.email + '</span></div><div class="info-row"><span class="ir-label">Plan</span><span class="ir-value">' + planLabel + '</span></div><div class="info-row"><span class="ir-label">Verified</span><span class="ir-value">' + (u.verified ? 'Yes' : 'No') + '</span></div><div class="info-row"><span class="ir-label">Trial</span><span class="ir-value">' + (u.trial_end ? new Date(u.trial_end).toLocaleDateString('en-US', {month:'short', day:'numeric', year:'numeric'}) : '—') + '</span></div><div class="info-row"><span class="ir-label">Created</span><span class="ir-value">' + new Date(u.created_at).toLocaleDateString('en-US', {month:'short', day:'numeric', year:'numeric', hour:'2-digit', minute:'2-digit'}) + '</span></div></div>';
+
+  setContent(html);
+}
+
+// ─── Render: Agents ───
+function renderAgents() {
+  var html =
+    '<h1>Agents</h1><div class="page-sub">Local AI workers running on your PC</div>' +
+    '<div class="empty-state"><div class="empty-icon">🤖</div><h3>No local agent connected</h3><p>Download the OPERA AI desktop app to connect your first agent and start executing tasks on your machine.</p><a class="btn btn-green" href="/pages/download">Download OPERA →</a></div>';
+  setContent(html);
+}
+
+// ─── Render: Tasks ───
+function renderTasks() {
+  var tsk = taskData;
+  if (!tsk) {
+    setContent('<div class="msg-box loading">⏳ Loading tasks...</div>');
+    return;
+  }
+
+  var html = '<h1>Tasks</h1><div class="page-sub">Task execution queue and history</div>';
+
+  if (tsk.queue_length > 0 || tsk.running > 0) {
+    html += '<div class="stat-grid" style="grid-template-columns:repeat(3,1fr)">' +
+      '<div class="stat-card"><div class="sc-label">Running</div><div class="sc-value sc-green">' + (tsk.running || 0) + '</div></div>' +
+      '<div class="stat-card"><div class="sc-label">Queue</div><div class="sc-value sc-amber">' + (tsk.queue_length || 0) + '</div></div>' +
+      '<div class="stat-card"><div class="sc-label">Completed Today</div><div class="sc-value sc-accent">' + (tsk.completed_today || 0) + '</div></div>' +
+    '</div>';
+  } else {
+    html += '<div class="empty-state"><div class="empty-icon">📋</div><h3>No tasks yet</h3><p>Tasks will appear here once your local agent starts executing. Install the desktop app to get started.</p><a class="btn btn-green btn-sm" href="/pages/download">Download OPERA</a></div>';
+  }
+
+  setContent(html);
+}
+
+// ─── Render: Skills ───
+function renderSkills() {
+  var skills = [
+    {icon:'📁',name:'File Organization',desc:'Organize, rename, clean files',color:'rgba(74,222,128,.12)',status:'Available',statusColor:'var(--green)',statusBg:'var(--green-bg)'},
+    {icon:'🌐',name:'Web Browser',desc:'Navigate, scrape, fill forms',color:'rgba(108,92,231,.12)',status:'Available',statusColor:'var(--accent)',statusBg:'rgba(108,92,231,.15)'},
+    {icon:'🎨',name:'Image Generation',desc:'SDXL, FLUX on your GPU',color:'rgba(240,180,41,.12)',status:'Trial',statusColor:'var(--amber)',statusBg:'rgba(240,180,41,.12)'},
+    {icon:'🎬',name:'Video Creation',desc:'Short videos with GPU acceleration',color:'rgba(239,68,68,.12)',status:'Trial',statusColor:'#f87171',statusBg:'rgba(239,68,68,.12)'},
+    {icon:'🔍',name:'Research & Analysis',desc:'Scrape, analyze, summarize',color:'rgba(59,130,246,.12)',status:'Available',statusColor:'#60a5fa',statusBg:'rgba(59,130,246,.12)'},
+    {icon:'⚡',name:'Workflow Automation',desc:'Schedule and run automations',color:'rgba(168,85,247,.12)',status:'Trial',statusColor:'#c084fc',statusBg:'rgba(168,85,247,.12)'},
+  ];
+
+  var html = '<h1>Skills</h1><div class="page-sub">Available capabilities for your AI agent</div><div class="skill-grid">';
+  skills.forEach(function(s) {
+    html += '<div class="skill-card"><div class="sk-icon" style="background:' + s.color + '">' + s.icon + '</div><div class="sk-info"><b>' + s.name + '</b><span>' + s.desc + '</span></div><span class="sk-status" style="background:' + s.statusBg + ';color:' + s.statusColor + '">' + s.status + '</span></div>';
+  });
+  html += '</div>';
+  setContent(html);
+}
+
+// ─── Render: Execution Credits ───
+function renderCredits() {
+  var tk = tokenData;
+  if (!tk) {
+    setContent('<div class="msg-box loading">⏳ Loading credit data...</div>');
+    return;
+  }
+
+  var remaining = tk.total_available || tk.today_remaining || 0;
+  var used = tk.today_used || 0;
+  var daily = tk.daily_allowance || 15000;
+  var pct = daily > 0 ? Math.round((used / daily) * 100) : 0;
+
+  var html =
+    '<h1>Execution Credits</h1><div class="page-sub">Usage and allowance</div>' +
+    '<div class="stat-grid">' +
+      '<div class="stat-card"><div class="sc-label">Total Available</div><div class="sc-value sc-accent">' + remaining + ' <small>credits</small></div></div>' +
+      '<div class="stat-card"><div class="sc-label">Today\'s Usage</div><div class="sc-value sc-amber">' + used + ' <small>credits</small></div><div class="sc-sub">' + pct + '% of daily limit</div></div>' +
+      '<div class="stat-card"><div class="sc-label">Daily Limit</div><div class="sc-value">' + daily + ' <small>credits/day</small></div><div class="sc-sub">Resets daily</div></div>' +
+    '</div>' +
+    '<div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:24px;margin-bottom:16px">' +
+      '<div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:10px"><span style="color:var(--ink3);font-weight:600">Daily Usage</span><span style="font-weight:700">' + used + ' / ' + daily + '</span></div>' +
+      '<div style="height:8px;background:var(--border);border-radius:6px;overflow:hidden"><div style="height:100%;width:' + Math.min(pct,100) + '%;background:var(--green);border-radius:6px;transition:width .5s"></div></div>' +
+    '</div>' +
+    '<div class="msg-box info">📌 Execution Credits reset daily. Unused credits do not carry over to the next day.</div>';
+
+  setContent(html);
+}
+
+// ─── Render: Settings ───
+// ─── Dev cache for devices data ───
+var cachedDevices = null;
+
+function renderSettings() {
+  var u = userData;
+  var html =
+    '<h1>Settings</h1><div class="page-sub">Account and workstation management</div>' +
+
+    /* ── Account Info ── */ +
+    '<div class="info-card" style="margin-bottom:16px">' +
+      '<div class="info-row"><span class="ir-label">Email</span><span class="ir-value">' + u.email + '</span></div>' +
+      '<div class="info-row"><span class="ir-label">Plan</span><span class="ir-value">' + u.plan.charAt(0).toUpperCase() + u.plan.slice(1) + '</span></div>' +
+      '<div class="info-row"><span class="ir-label">Verified</span><span class="ir-value">' + (u.verified ? '✅ Yes' : '❌ No') + '</span></div>' +
+      (u.trial_end ? '<div class="info-row"><span class="ir-label">Trial Ends</span><span class="ir-value">' + new Date(u.trial_end).toLocaleDateString('en-US', {month:'short', day:'numeric', year:'numeric'}) + '</span></div>' : '') +
+      '<div class="info-row"><span class="ir-label">Joined</span><span class="ir-value">' + new Date(u.created_at).toLocaleDateString('en-US', {month:'short', day:'numeric', year:'numeric'}) + '</span></div>' +
+    '</div>' +
+
+    /* ── Connected Workstations ── */ +
+    '<h2 style="font-size:18px;font-weight:800;margin:24px 0 12px">🖥️ Connected Workstations</h2>' +
+    '<div class="page-sub" style="margin-bottom:16px">Devices registered with your account.</div>' +
+    '<div id="devicesList">' +
+      '<div class="msg-box loading">⏳ Loading workstations...</div>' +
+    '</div>' +
+
+    '<div style="display:flex;gap:10px;margin-top:20px">' +
+      '<button class="btn btn-ghost btn-sm" onclick="syncPlan()">🔄 Sync Plan</button>' +
+      '<button class="btn btn-ghost btn-sm" onclick="refreshDevices()">🔄 Refresh Devices</button>' +
+      '<button class="btn btn-ghost btn-sm" onclick="doLogout()">🚪 Log Out</button>' +
+    '</div>';
+
+  setContent(html);
+  loadDevices();
+}
+
+function loadDevices() {
+  var token = localStorage.getItem('opera_token');
+  if (!token) return;
+  apiGet('/api/devices').then(function(data) {
+    if (data.ok && data.devices) {
+      cachedDevices = data.devices;
+      renderDevices(data.devices, data.max_workstations);
+    } else {
+      document.getElementById('devicesList').innerHTML = '<div class="msg-box error">Could not load workstations.</div>';
+    }
+  }).catch(function() {
+    document.getElementById('devicesList').innerHTML = '<div class="msg-box error">Could not load workstations.</div>';
+  });
+}
+
+function renderDevices(devices, maxWs) {
+  var el = document.getElementById('devicesList');
+  if (!el) return;
+  var html = '<div class="msg-box info" style="margin-bottom:12px">🖥️ ' + devices.length + ' of ' + maxWs + ' workstations used</div>';
+  if (devices.length === 0) {
+    html += '<div class="empty-state" style="padding:24px"><div class="empty-icon" style="font-size:28px">💻</div><h3>No workstations connected</h3><p>Install the OPERA AI desktop app on your PC to register your first workstation.</p></div>';
+  } else {
+    html += '<div style="display:flex;flex-direction:column;gap:8px">';
+    devices.forEach(function(d) {
+      var lastSeen = d.last_seen ? new Date(d.last_seen).toLocaleDateString('en-US', {month:'short', day:'numeric', hour:'2-digit', minute:'2-digit'}) : '—';
+      var gpu = d.gpu_name || 'Not detected';
+      var status = d.active !== false ? '🟢 Active' : '🔴 Inactive';
+      html += '<div style="display:flex;align-items:center;gap:14px;padding:14px 16px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-sm)">' +
+        '<div style="width:36px;height:36px;border-radius:8px;background:' + (d.active !== false ? 'rgba(74,222,128,.12)' : 'rgba(239,68,68,.12)') + ';display:grid;place-items:center;font-size:16px;flex-shrink:0">💻</div>' +
+        '<div style="flex:1;min-width:0">' +
+          '<b style="font-size:14px;display:block">' + (d.device_name || 'Unnamed PC') + '</b>' +
+          '<span style="font-size:11px;color:var(--ink3)">🎮 ' + gpu + ' · ' + (d.os_name || '—') + '</span>' +
+        '</div>' +
+        '<div style="text-align:right;flex-shrink:0">' +
+          '<span style="font-size:11px;font-weight:700">' + status + '</span>' +
+          '<br><span style="font-size:10px;color:var(--ink3)">' + lastSeen + '</span>' +
+        '</div>' +
+        '<button class="btn btn-ghost btn-sm" style="padding:6px 12px;font-size:10px;color:var(--red);border-color:rgba(239,68,68,.25)" onclick="removeDevice(\'' + d.id + '\')">Remove</button>' +
+      '</div>';
+    });
+    html += '</div>';
+  }
+  el.innerHTML = html;
+}
+
+function removeDevice(deviceId) {
+  if (!confirm('Remove this workstation? It can be re-registered later.')) return;
+  var token = localStorage.getItem('opera_token');
+  fetch('/api/devices/remove', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'Authorization': '***' + token },
+    body: JSON.stringify({ device_id: deviceId })
+  }).then(function(r) { return r.json(); }).then(function(d) {
+    if (d.ok) { refreshDevices(); }
+    else { alert('Failed to remove: ' + (d.error || 'unknown')); }
+  }).catch(function() { alert('Server error.'); });
+}
+
+function syncPlan() {
+  var token = localStorage.getItem('opera_token');
+  if (!token) return;
+  var btn = document.querySelector('.btn-ghost');
+  btn.textContent = '⏳ Syncing...';
+  btn.disabled = true;
+  fetch('/api/auth/sync-plan', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'Authorization': '***' + token }
+  }).then(function(r) { return r.json(); }).then(function(d) {
+    if (d.ok) {
+      alert('✅ Plan synced. Capability reload recommended.');
+      loadAllData();
+    } else {
+      alert('❌ ' + (d.error || 'Sync failed'));
+    }
+    btn.textContent = '🔄 Sync Plan';
+    btn.disabled = false;
+  }).catch(function() {
+    alert('Server error.');
+    btn.textContent = '🔄 Sync Plan';
+    btn.disabled = false;
+  });
+}
+
+function refreshDevices() {
+  document.getElementById('devicesList').innerHTML = '<div class="msg-box loading">⏳ Loading workstations...</div>';
+  loadDevices();
+}
+
+// ─── Logout ───
+function doLogout() {
+  localStorage.removeItem('opera_token');
+  window.location.href = '/';
+}
+</script>
 </body>
 </html>

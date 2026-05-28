@@ -24,10 +24,13 @@ from core.executor import (
     window_list, window_activate, window_minimize, get_active_window,
     file_read, file_write, file_list, file_delete, file_copy, file_search,
     process_list, process_run, process_kill,
-    system_info, clipboard_get, clipboard_set, ocr_image
+    system_info, clipboard_get, clipboard_set, ocr_image,
+    PERMISSION_SAFE, PERMISSION_ADVANCED, PERMISSION_DANGEROUS, PERMISSION_SYSTEM,
+    _get_permission_level, _get_function_by_action,
+    detect_gpu, get_gpu_install_message,
 )
 from core.skill_manager import get_registry
-from core.task_queue import get_queue
+from core.task_queue import get_queue, MAX_CONCURRENT
 from core.scheduler import get_scheduler
 from core.payment import (
     get_plans, calculate_price, create_subscription,
@@ -63,14 +66,14 @@ HISTORY_DIR.mkdir(exist_ok=True)
 # ── 보안 미들웨어 ──
 
 # CSRF: POST 요청은 반드시 Origin/Referer 검증
-_CSRF_EXEMPT = {"/api/deepseek/chat", "/api/paypal/webhook"}
+_CSRF_EXEMPT = {"/api/deepseek/chat", "/api/paypal/webhook", "/api/devices"}
 
 @app.before_request
 def csrf_check():
     """CSRF 보호 — POST 요청 Origin/Referer 검증 (webhook 제외)"""
     if request.method != "POST":
         return None
-    if request.path in _CSRF_EXEMPT or request.path.startswith("/api/agent/"):
+    if request.path in _CSRF_EXEMPT or request.path.startswith("/api/agent/") or request.path.startswith("/api/devices/"):
         return None
     if request.path.startswith("/api/auth/"):
         return None  # auth는 Origin 다양함
@@ -83,14 +86,11 @@ def csrf_check():
         return jsonify({"error": "CSRF: Origin/Referer required"}), 403
     
     # 허용된 출처 목록
-    allowed = ["http://localhost:5000", "http://127.0.0.1:5000",
-               "https://opera.workbotai.net", "https://lsgsg0908-png.github.io"]
-    
     for h in [origin, referer]:
         if h:
             host = h.split("//")[-1].split("/")[0]
             if not any(a in host for a in ["localhost", "127.0.0.1", "opera.workbotai.net",
-                                             "lsgsg0908-png.github.io", "operaai.net"]):
+                                             "lsgsg0908-png.github.io", "opera-ai.net", "operaai.net"]):
                 return jsonify({"error": "CSRF: Invalid origin"}), 403
     return None
 
@@ -159,7 +159,7 @@ def global_rate_limit():
     if len(_rate_store[key]) >= limit:
         return jsonify({
             "error": "rate_limit_exceeded",
-            "message": f"요청이 너무 빠릅니다. {limit}회/분 제한",
+            "message": f"request_too_fast_max_{limit}_per_minute",
             "retry_after": 60 - int(now - _rate_store[key][0])
         }), 429
     
@@ -208,31 +208,89 @@ def _check_license():
     return True
 
 
-def _log_history(user_id, action, detail, tokens_used=0):
-    """작업 히스토리 저장"""
+def _log_history(user_id, action, detail, tokens_used=0, permission_level=None):
+    """작업 히스토리 저장 (타임라인용)"""
     entry = {
         "time": datetime.datetime.now().isoformat(),
         "user": user_id,
         "action": action,
         "detail": str(detail)[:200],
-        "tokens": tokens_used
+        "tokens": tokens_used,
+        "permission": permission_level
     }
     today = str(datetime.date.today())
     log_file = HISTORY_DIR / f"{today}.jsonl"
     with open(log_file, "a") as f:
         f.write(json.dumps(entry, ensure_ascii=False) + "\n")
+    # 10000 라인 초과 시 오래된 항목 제거
+    _rotate_history_if_needed(log_file)
 
+
+def _rotate_history_if_needed(log_file):
+    """로그 파일 10000라인 초과 시 오래된 절반 제거"""
+    if log_file.exists():
+        lines = log_file.read_text().splitlines()
+        if len(lines) > 10000:
+            log_file.write_text("\n".join(lines[-5000:]) + "\n")
+
+
+@app.route("/api/history/timeline", methods=["GET"])
+def api_history_timeline():
+    """실행 타임라인 조회 (최근 100건)"""
+    days = request.args.get("days", 1, type=int)
+    limit = request.args.get("limit", 100, type=int)
+    result = []
+    for i in range(days):
+        d = (datetime.date.today() - datetime.timedelta(days=i)).isoformat()
+        f = HISTORY_DIR / f"{d}.jsonl"
+        if f.exists():
+            with open(f) as fh:
+                for line in fh:
+                    line = line.strip()
+                    if line:
+                        try:
+                            result.append(json.loads(line))
+                        except:
+                            pass
+    result.sort(key=lambda x: x.get("time", ""), reverse=True)
+    return jsonify({"events": result[:limit], "total": len(result), "history_days": days})
+
+
+@app.route("/api/health", methods=["GET"])
+def api_health():
+    return jsonify({"ok": True, "status": "healthy", "timestamp": datetime.datetime.now().isoformat()})
 
 # ── API: 사용자 ──
 
 @app.route("/api/auth/register", methods=["POST"])
 def api_register():
+    import time as _time
     data = request.get_json() or {}
+    email_addr = data.get("email", "").strip().lower()
+
+    # 이메일 인증 확인
+    verified_expires = _verified_emails.get(email_addr)
+    if not verified_expires or _time.time() > verified_expires:
+        if email_addr in _verified_emails:
+            _verified_emails.pop(email_addr, None)
+        return jsonify({"ok": False, "error": "Email verification required."}), 403
+
+    # 인증 완료 — 사용 가능, 정리 후 가입 진행
+    _verified_emails.pop(email_addr, None)
+
     result = register(
         email=data.get("email", ""),
         password=data.get("password", ""),
         username=data.get("username", "")
     )
+
+    # register가 dict 반환 가정, 오류 형식 통일
+    if isinstance(result, dict):
+        if "error" in result:
+            result["ok"] = False
+        else:
+            result["ok"] = True
+
     return jsonify(result)
 
 
@@ -254,14 +312,6 @@ def api_logout():
     return jsonify({"error": "no_token"}), 400
 
 
-@app.route("/api/auth/force-logout", methods=["POST"])
-def api_force_logout():
-    """사용자 강제 로그아웃 (모든 세션)"""
-    user = authenticate(request)
-    if not user:
-        return jsonify({"error": "인증 필요"}), 401
-    data = request.get_json() or {}
-    target_user_id = data.get("user_id", user["id"])
     result = force_logout_all(target_user_id)
     return jsonify(result)
 
@@ -270,7 +320,125 @@ def api_force_logout():
 def api_me():
     user = authenticate(request)
     if not user:
-        return jsonify({"error": "인증 필요", "user": None})
+        return jsonify({"ok": False, "error": "authentication_required"}), 401
+    return jsonify({"ok": True, "user": user})
+
+# ── 이메일 인증 저장소 ──
+# {email: {hash, expires_at, failures, cooldown_until}}
+_verify_store = {}
+# 인증 완료된 이메일 (10분 유효)
+_verified_emails = {}  # {email: expires_at}
+
+@app.route("/api/auth/send-verification", methods=["POST"])
+def api_send_verification():
+    import hashlib, time as _time, random as _random, smtplib, email.mime.text
+    data = request.get_json() or {}
+    email_addr = data.get("email", "").strip().lower()
+    if not email_addr or "@" not in email_addr:
+        return jsonify({"ok": False, "error": "Valid email required."}), 400
+
+    now = _time.time()
+    existing = _verify_store.get(email_addr)
+
+    # 60초 재요청 제한
+    if existing and existing.get("cooldown_until", 0) > now:
+        remaining = int(existing["cooldown_until"] - now)
+        return jsonify({
+            "ok": False,
+            "error": f"Please wait {remaining} seconds before requesting again."
+        }), 429
+
+    # 6자리 코드 생성
+    code = str(_random.randint(100000, 999999))
+    expires_at = now + 600  # 10분
+    code_hash = hashlib.sha256(code.encode()).hexdigest()
+
+    _verify_store[email_addr] = {
+        "hash": code_hash,
+        "expires_at": expires_at,
+        "failures": 0,
+        "cooldown_until": now + 60
+    }
+
+    # HTML 이메일 발송
+    smtp_host = os.environ.get("SMTP_HOST", "")
+    smtp_user = os.environ.get("SMTP_USER", "")
+    smtp_pass = os.environ.get("SMTP_PASS", "")
+    smtp_from = os.environ.get("SMTP_FROM", "OPERA AI <noreply@opera-ai.net>")
+
+    html = f"""<!DOCTYPE html>
+<html>
+<head><meta charset="utf-8"></head>
+<body style="font-family:system-ui,-apple-system,sans-serif;background:#11100e;padding:32px">
+<div style="max-width:480px;margin:0 auto;background:#1a1815;border-radius:20px;padding:36px;border:1px solid #2a2824">
+<div style="width:40px;height:40px;border-radius:10px;background:#4ade80;display:grid;place-items:center;font-size:20px;font-weight:900;color:#11100e;margin-bottom:16px">O</div>
+<h2 style="margin:0 0 8px;font-size:22px;color:#f0ece4;font-weight:800">Verify your email</h2>
+<p style="color:#b5ab9d;line-height:1.6;margin:0 0 24px;font-size:14px">Enter this code to complete your OPERA AI registration. It expires in 10 minutes.</p>
+<div style="background:#22201c;border-radius:14px;padding:24px;text-align:center;border:1px solid #2a2824">
+<div style="font-size:42px;letter-spacing:12px;font-weight:900;color:#4ade80;font-family:monospace">{code}</div>
+</div>
+<p style="font-size:12px;color:#7a7162;margin-top:20px;text-align:center">If you did not request this, you can safely ignore this email.</p>
+</div>
+</body>
+</html>"""
+
+    sent = False
+    try:
+        msg = email.mime.multipart.MIMEMultipart("alternative")
+        msg["Subject"] = "Your OPERA AI verification code"
+        msg["From"] = smtp_from
+        msg["To"] = email_addr
+        msg.attach(email.mime.text.MIMEText(f"Your verification code: {code}\n\nExpires in 10 minutes.", "plain"))
+        msg.attach(email.mime.text.MIMEText(html, "html"))
+        with smtplib.SMTP(smtp_host, int(os.environ.get("SMTP_PORT", 587))) as s:
+            s.starttls()
+            s.login(smtp_user, smtp_pass)
+            s.send_message(msg)
+        sent = True
+        print(f"[verify] Code sent to {email_addr}")
+    except Exception as ex:
+        print(f"[verify] SMTP FAILED for {email_addr}: {ex}")
+
+    if sent:
+        return jsonify({"ok": True, "message": "Verification code sent."})
+    else:
+        return jsonify({"ok": False, "error": "Email send failed. Please try again later."}), 500
+
+
+@app.route("/api/auth/verify-code", methods=["POST"])
+def api_verify_code():
+    import hashlib, time as _time
+    data = request.get_json() or {}
+    email_addr = data.get("email", "").strip().lower()
+    code = data.get("code", "").strip()
+    if not email_addr or not code:
+        return jsonify({"ok": False, "error": "Email and code required"}), 400
+
+    stored = _verify_store.get(email_addr)
+    if not stored:
+        return jsonify({"ok": False, "error": "No verification code found. Request a new one."}), 400
+
+    now = _time.time()
+    if now > stored["expires_at"]:
+        _verify_store.pop(email_addr, None)
+        return jsonify({"ok": False, "error": "Verification code expired. Request a new one."}), 400
+
+    # 실패 횟수 제한 (최대 5회)
+    if stored["failures"] >= 5:
+        _verify_store.pop(email_addr, None)
+        return jsonify({"ok": False, "error": "Too many failed attempts. Request a new code."}), 429
+
+    input_hash = hashlib.sha256(code.encode()).hexdigest()
+    if stored["hash"] != input_hash:
+        stored["failures"] += 1
+        remaining = 5 - stored["failures"]
+        return jsonify({"ok": False, "error": f"Invalid code. {remaining} attempts remaining."}), 400
+
+    # 성공 — 인증 완료 등록 (10분 유효)
+    _verify_store.pop(email_addr, None)
+    _verified_emails[email_addr] = now + 600
+    return jsonify({"ok": True, "message": "Email verified."})
+
     return jsonify({"user": user})
 
 
@@ -456,7 +624,7 @@ def api_execute():
 
     # ── Layer 1: 라이선스 체크 ──
     if not _check_license():
-        return jsonify({"error": "라이선스 검증 실패"})
+        return jsonify({"error": "license_verification_failed"})
 
     # ── Layer 2: 계정 차단 체크 ──
     blocked = check_if_blocked()
@@ -474,20 +642,20 @@ def api_execute():
         _log_history("security_violation", str(safety["violations"]), strike_result, 0)
         return jsonify({
             "error": safety.get("violations", []),
-            "message": "보안 위반이 감지되었습니다",
+            "message": "security_violation_detected",
             "strike": strike_result
         })
 
     # ── Layer 2: Rate Limit ──
     rate = check_rate_limit(10)
     if not rate.get("allowed"):
-        return jsonify({"error": "요청이 너무 빠릅니다. 잠시 후 다시 시도해주세요", "retry_after": rate.get("retry_after", 0)})
+        return jsonify({"error": "request_too_fast_try_again_later", "retry_after": rate.get("retry_after", 0)})
 
     # ── Layer 1: 경로 차단 ──
     check_path = params.get("path", "")
     if check_path and is_path_blocked(check_path):
         _log_history("blocked_path", check_path, {}, 0)
-        return jsonify({"error": "접근이 차단된 경로입니다"})
+        return jsonify({"error": "access_to_path_is_blocked"})
 
     # 토큰 예상 소비량
     est_tokens = estimate_tokens(len(json.dumps(data)), params.get("complexity", "normal"))
@@ -496,20 +664,62 @@ def api_execute():
     available, source, remaining = check_token_available(est_tokens)
     if not available:
         return jsonify({
-            "error": "일일 토큰 한도를 초과했습니다",
+            "error": "daily_token_limit_exceeded",
             "token_status": get_token_status(),
-            "suggestion": "정량제 토큰을 추가 구매하거나 내일 다시 시도해주세요"
+            "suggestion": "purchase_additional_tokens_or_try_tomorrow"
+        })
+
+    # ── Layer 3: 권한 레벨 확인 + 승인 ──
+    permission = _get_permission_level(action)
+    preview = data.get("preview", False)
+    confirmed = data.get("confirmed", False)
+
+    if preview:
+        return jsonify({
+            "preview": True,
+            "action": action,
+            "params": params,
+            "permission_level": permission,
+            "expected_tokens": est_tokens,
+            "requires_confirmation": permission in (PERMISSION_DANGEROUS, PERMISSION_SYSTEM),
+            "message": _get_preview_message(action, permission),
+        })
+
+    # DANGEROUS/SYSTEM: confirmed 필수
+    if permission in (PERMISSION_DANGEROUS, PERMISSION_SYSTEM) and not confirmed:
+        return jsonify({
+            "error": f"{permission} 등급 작업은 confirmed=true가 필요합니다",
+            "permission_level": permission,
+            "action": action,
+            "hint": "preview=true로 먼저 예상 영향을 확인하세요",
         })
 
     # 실행
     result = _route_action(action, params)
     result["tokens_used"] = est_tokens
+    result["permission_level"] = permission
 
     # 토큰 소비
     consume_tokens(est_tokens)
     _log_history(config.get("user_id", "local"), action, result, est_tokens)
 
     return jsonify(result)
+
+
+def _get_preview_message(action, permission):
+    """preview 모드에서 실행 전 예상 영향 메시지"""
+    messages = {
+        "process_run": "[DANGEROUS] 명령어를 실행합니다. 시스템이 변경될 수 있습니다.",
+        "shutdown_pc": "[DANGEROUS] PC를 종료합니다. 저장하지 않은 작업이 손실될 수 있습니다.",
+        "file_delete": "[ADVANCED] 파일을 삭제합니다. 복구가 불가능할 수 있습니다.",
+        "file_write": "[ADVANCED] 파일을 생성/수정합니다.",
+        "wake_on_lan": "[ADVANCED] 네트워크를 통해 PC를 켭니다.",
+        "clipboard_set": "[ADVANCED] 클립보드 내용을 변경합니다.",
+        "process_kill": "[ADVANCED] 프로세스를 강제 종료합니다.",
+        "window_activate": "[ADVANCED] 창을 활성화합니다.",
+        "window_minimize": "[ADVANCED] 창을 최소화합니다.",
+    }
+    return messages.get(action, f"[{permission}] {action} 작업을 실행합니다.")
 
 
 def _route_action(action, params):
@@ -562,10 +772,16 @@ def _route_action(action, params):
     if not handler:
         return {"error": f"알 수 없는 액션: {action}"}
 
+    # 권한 레벨 확인
+    permission = _get_permission_level(action)
+
     try:
-        return handler()
+        result = handler()
+        if isinstance(result, dict):
+            result["permission_level"] = permission
+        return result
     except Exception as e:
-        return {"error": str(e)}
+        return {"error": str(e), "permission_level": permission}
 
 
 # ── AI 처리 ──
@@ -578,38 +794,179 @@ if _env_path.exists():
     for _line in _env_path.read_text().strip().split("\n"):
         if "=" in _line and not _line.startswith("#"):
             _k, _v = _line.split("=", 1)
-            _ENV[_k.strip()] = _v.strip()
+            _k = _k.strip()
+            _v = _v.strip()
+            _ENV[_k] = _v
+            os.environ[_k] = _v  # subprocess 등에서 접근 가능하도록
+
+# Production: JWT_SECRET 없으면 시작 실패
+if not os.environ.get("JWT_SECRET"):
+    print("FATAL: JWT_SECRET is not set in .env")
+    print("Generate: openssl rand -hex 32")
+    sys.exit(1)
+
+# Runtime Integrity Check: 룰 파일 checksum
+_RULES_CHECKSUMS = {}
+_RULES_DIR = Path(__file__).parent.parent.parent / ".openclaw" / "workspace"
+for _fname in ["SOUL.md", "REPORTING.md", "RULES_EXECUTION_VERIFY.md"]:
+    _fpath = _RULES_DIR / _fname
+    if _fpath.exists():
+        _RULES_CHECKSUMS[_fname] = hashlib.md5(_fpath.read_bytes()).hexdigest()
+        print(f"  [INTEGRITY] {_fname}: {_RULES_CHECKSUMS[_fname][:12]}...")
+    else:
+        print(f"  [INTEGRITY] {_fname}: NOT FOUND (non-critical)")
 
 _DEEPSEEK_KEY = _ENV.get("DEEPSEEK_API_KEY", "")
 _DEEPSEEK_URL = "https://api.deepseek.com/chat/completions"
 _DS_MODELS = {"fast": "deepseek-v4-flash", "deep": "deepseek-v4-flash", "expert": "deepseek-v4-flash"}
 _DS_MAX_TOKENS = {"fast": 1024, "deep": 4096, "expert": 8192}
 _DS_TEMPS = {"fast": 0.3, "deep": 0.1, "expert": 0.05}
-_DS_SYSTEM = "당신은 OPERA AI(리치)입니다. PC 작업을 자동화하는 AI 비서입니다. 사용자의 명령을 분석하고 적절히 응답하거나 작업을 실행합니다. 한국어로 응답하고, 불필요한 설명 없이 핵심만 전달합니다."
+
+# ── THINKING 모드 (토큰 비용 최적화) ──
+# Obujang 설계 반영: NONE/LOW/MEDIUM/HIGH/CRITICAL
+_THINKING_MODES = {
+    "none":     {"max_tokens": 256,  "temperature": 0.5,  "desc": "기본 확인/상태 체크/인사 — 최소 토큰"},
+    "low":      {"max_tokens": 1024, "temperature": 0.3,  "desc": "가벼운 작업 (짧은 문서/빠른 응답)"},
+    "medium":   {"max_tokens": 4096, "temperature": 0.1,  "desc": "일반 작업 (중간 문서/분석)"},
+    "high":     {"max_tokens": 8192, "temperature": 0.05, "desc": "복잡한 작업 (코드/분석/전략)"},
+    "critical": {"max_tokens": 16384,"temperature": 0.01, "desc": "고난이도 작업 (대규모 분석/설계)"},
+}
+# backward compatibility: fast→low, deep→medium, expert→high
+_THINKING_MODE_ALIAS = {"fast": "low", "deep": "medium", "expert": "high"}
+
+
+def _resolve_thinking_mode(mode):
+    """THINKING 모드 이름을 실제 설정으로 변환"""
+    mode = mode.lower()
+    # alias 매핑
+    mode = _THINKING_MODE_ALIAS.get(mode, mode)
+    config = _THINKING_MODES.get(mode)
+    if config:
+        return config["max_tokens"], config["temperature"]
+    # fallback: medium
+    return _THINKING_MODES["medium"]["max_tokens"], _THINKING_MODES["medium"]["temperature"]
+
+
+def _list_thinking_modes():
+    """사용 가능한 THINKING 모드 목록 (API용)"""
+    return [{"id": k, "max_tokens": v["max_tokens"], "temperature": v["temperature"], "desc": v["desc"]}
+            for k, v in _THINKING_MODES.items()]
+
+
+@app.route("/api/thinking/modes", methods=["GET"])
+def api_thinking_modes():
+    """THINKING 모드 목록 조회"""
+    return jsonify({"modes": _list_thinking_modes(), "default": "medium"})
+
+# -- GPU detection API --
+@app.route("/api/system/gpu", methods=["GET"])
+def api_gpu_detect():
+    """Detect local PC GPU"""
+    gpu = detect_gpu()
+    message = get_gpu_install_message(gpu)
+    return jsonify({
+        "gpu": gpu,
+        "install_message": message,
+        "consent_required": gpu.get("grade") not in ("none",),
+    })
+
+
+# -- User consent management --
+CONSENT_FILE = Path(__file__).parent / "data" / "consent.json"
+
+
+@app.route("/api/system/consent", methods=["GET", "POST"])
+def api_consent():
+    """User consent management"""
+    if request.method == "POST":
+        data = request.get_json(silent=True) or {}
+        consent_type = data.get("type", "general")
+        agreed = data.get("agreed", False)
+        consents = {}
+        if CONSENT_FILE.exists():
+            consents = json.loads(CONSENT_FILE.read_text())
+        if agreed:
+            consents[consent_type] = {
+                "agreed": True,
+                "agreed_at": datetime.datetime.now().isoformat(),
+                "version": "1.0"
+            }
+        else:
+            consents[consent_type] = {"agreed": False}
+        CONSENT_FILE.write_text(json.dumps(consents, indent=2, ensure_ascii=False))
+        return jsonify({"status": "saved", "consent": consents.get(consent_type)})
+    
+    consents = {}
+    if CONSENT_FILE.exists():
+        consents = json.loads(CONSENT_FILE.read_text())
+    
+    disclaimer = (
+        "OPERA AI executes tasks directly on your PC.\n\n"
+        "1. We ask for consent before modifying or deleting important files.\n"
+        "2. You are solely responsible for any data loss or system changes\n"
+        "   resulting from misuse or lack of understanding.\n"
+        "3. DANGEROUS-level actions always require additional confirmation.\n"
+        "4. Automatic backups are created but do not guarantee recovery in all cases.\n\n"
+        "Do you agree to these terms?"
+    )
+    
+    return jsonify({
+        "consents": consents,
+        "disclaimer": disclaimer,
+        "requires_consent": not consents.get("general", {}).get("agreed", False),
+    })
+
+
+
+_DS_SYSTEM = (
+    "You are OPERA AI (Riche), an execution-type AI assistant. "
+    "Your tasks: analyze user commands, execute actions, and provide verified results. "
+    "Rules: RESPOND IN ENGLISH. No speculation. No unverified claims. "
+    "Every report MUST include a status tag: [CONFIRMED], [OBSERVED], [INFERRED], [UNVERIFIED], or [FAILED]. "
+    "See RULES_EXECUTION_VERIFY.md for full verification rules."
+)
 
 
 def _ds_chat(messages, mode="fast"):
-    """DeepSeek API 호출 (내부용)"""
+    """DeepSeek API 호출 (재시도 + graceful degradation 적용)"""
     import requests as _req
-    try:
-        resp = _req.post(_DEEPSEEK_URL, json={
-            "model": _DS_MODELS.get(mode, "deepseek-chat"),
-            "messages": messages,
-            "max_tokens": _DS_MAX_TOKENS.get(mode, 1024),
-            "temperature": _DS_TEMPS.get(mode, 0.3),
-            "stream": False,
-        }, headers={
-            "Authorization": f"Bearer {_DEEPSEEK_KEY}",
-            "Content-Type": "application/json",
-        }, timeout=30)
-        if resp.ok:
-            data = resp.json()
-            usage = data.get("usage", {})
-            content = data.get("choices", [{}])[0].get("message", {}).get("content", "")
-            return content, usage.get("total_tokens", 0), None
-        return None, 0, f"DeepSeek {resp.status_code}: {resp.text[:200]}"
-    except Exception as e:
-        return None, 0, str(e)
+    import time as _t
+    
+    max_retries = 2
+    retry_delay = 1.0  # 초
+    last_err = None
+    
+    for attempt in range(max_retries + 1):
+        try:
+            # THINKING 모드로 max_tokens/temperature 결정
+            _mt, _tmp = _resolve_thinking_mode(mode)
+            resp = _req.post(_DEEPSEEK_URL, json={
+                "model": "deepseek-v4-flash",
+                "messages": messages,
+                "max_tokens": _mt,
+                "temperature": _tmp,
+                "stream": False,
+            }, headers={
+                "Authorization": f"Bearer {_DEEPSEEK_KEY}",
+                "Content-Type": "application/json",
+            }, timeout=30)
+            if resp.ok:
+                data = resp.json()
+                usage = data.get("usage", {})
+                content = data.get("choices", [{}])[0].get("message", {}).get("content", "")
+                return content, usage.get("total_tokens", 0), None
+            # 5xx 에러만 재시도
+            if resp.status_code >= 500 and attempt < max_retries:
+                last_err = f"DeepSeek {resp.status_code}: retrying..."
+                _t.sleep(retry_delay * (attempt + 1))
+                continue
+            return None, 0, f"DeepSeek {resp.status_code}: {resp.text[:200]}"
+        except Exception as e:
+            last_err = str(e)
+            if attempt < max_retries:
+                _t.sleep(retry_delay * (attempt + 1))
+                continue
+            return None, 0, f"ai_service_unavailable_after_{max_retries}_retries: {last_err}"
 
 
 @app.route("/api/deepseek/chat", methods=["POST"])
@@ -650,13 +1007,25 @@ def api_deepseek_proxy():
     # 작업 명령 파싱
     commands = _parse_ai_commands(content, prompt)
     
+    # 응답 검증 미들웨어 (Runtime 레벨)
+    validated_content, warnings, blocked = _validate_agent_response(content, commands)
+    
+    if blocked:
+        return jsonify({
+            "status": "blocked",
+            "response": validated_content,
+            "reason": "validation_failed",
+            "validation_warnings": warnings,
+        }), 422
+    
     return jsonify({
         "status": "ok",
-        "response": content,
+        "response": validated_content,
         "commands": commands,
         "tokens_used": tokens,
         "actual_cost": cost,
-        "model": _DS_MODELS.get(mode),
+        "model": "deepseek-v4-flash",
+        "validation_warnings": warnings if warnings else None,
     })
 
 
@@ -669,10 +1038,20 @@ def _ai_process(prompt, mode="fast"):
     content, tokens, err = _ds_chat(messages, mode)
     if err:
         _log_history("ai_error", err[:100], {}, 0)
-        return {"status": "error", "error": f"AI 오류: {err}"}
+        return {"status": "error", "error": f"ai_error_{err}"}
     
     cost = _deduct_and_log(prompt, tokens, len(content), "ai_chat")
     commands = _parse_ai_commands(content, prompt)
+    
+    # 응답 검증 미들웨어 (Runtime 레벨)
+    validated_content, warnings, blocked = _validate_agent_response(content, commands)
+    if blocked:
+        validated_content = {
+            "error": "blocked_by_validation",
+            "reason": warnings,
+        }
+    if warnings:
+        _log_history("validation_warning", str(warnings), {}, 0)
     
     return {
         "status": "ok",
@@ -680,7 +1059,7 @@ def _ai_process(prompt, mode="fast"):
         "commands": commands,
         "tokens_used": tokens,
         "actual_cost": cost,
-        "model": _DS_MODELS.get(mode),
+        "model": "deepseek-v4-flash",
         "mode": mode,
     }
 
@@ -703,6 +1082,92 @@ def _parse_ai_commands(ai_response, original_prompt):
     return commands
 
 
+# ── 검증 시스템: 추정 표현 패턴 ──
+_SPECULATIVE_EN = r'\b(probably|maybe|likely|seems|appears|might|could|possibly|presumably|arguably)\b'
+_SPECULATIVE_KO = r'\b(추정|가능성|예상|아마|약|쯤|대략|거의|대충|~)\b'
+_SPECULATIVE_PATTERNS = [_SPECULATIVE_EN, _SPECULATIVE_KO]
+
+
+def _validate_agent_response(content, commands):
+    """
+    AI 응답 검증 미들웨어 (Runtime 레벨 강제)
+    - 상태 태그 존재 확인
+    - 추정 표현 탐지 + [CONFIRMED] 충돌 시 BLOCKED
+    - 증거/명령어 실행 결과 검증
+    - 검증 실패 시 REPORT BLOCKED
+    
+    Returns: (validated_content, status, warnings, blocked)
+    """
+    import re
+    warnings = []
+    blocked = False
+    
+    # 1. 상태 태그 존재 확인
+    valid_tags = ["[CONFIRMED]", "[OBSERVED]", "[INFERRED]", "[UNVERIFIED]", "[FAILED]"]
+    has_tag = any(tag in content for tag in valid_tags)
+    if not has_tag:
+        content = f"[UNVERIFIED] (auto-downgraded: missing status tag)\n{content}"
+        warnings.append("missing_status_tag")
+    
+    # 2. [CONFIRMED] 상태인데 추정 표현이 있는지 확인
+    if "[CONFIRMED]" in content:
+        has_speculative = False
+        for pattern in _SPECULATIVE_PATTERNS:
+            if re.search(pattern, content, re.IGNORECASE):
+                has_speculative = True
+                break
+        if has_speculative:
+            # [CONFIRMED] + 추정표현 = INVALID REPORT → BLOCKED
+            warnings.append("speculative_in_confirmed_blocked")
+            blocked = True
+            # 차단 메시지로 대체
+            content = (
+                "[FAILED] REPORT BLOCKED: [CONFIRMED] status contains speculative language.\n"
+                "The model claimed confirmed results while using uncertain language.\n"
+                "Re-run with proper verification."
+            )
+    
+    # 3. [OBSERVED] 상태인데 추정 표현이 있는지 확인
+    if "[OBSERVED]" in content:
+        for pattern in _SPECULATIVE_PATTERNS:
+            if re.search(pattern, content, re.IGNORECASE):
+                content = content.replace("[OBSERVED]", "[UNVERIFIED]")
+                warnings.append("speculative_in_observed_downgraded")
+                break
+    
+    # 4. 명령어 실행 결과 검증 (명령어가 있고 실제 실행 결과가 없는 경우)
+    if commands and "error" not in content.lower():
+        has_evidence = any(kw in content.lower() for kw in ["result:", "output:", "response:", "✅", "✓"])
+        if not has_evidence:
+            content += "\n[UNVERIFIED] (auto-downgraded: commands without evidence)"
+            warnings.append("commands_without_evidence")
+    
+    # 5. 실제 증거 검증 (evidence keywords in response body)
+    if "[CONFIRMED]" in content:
+        has_real_evidence = any(kw in content.lower() for kw in [
+            "stdout:", "stderr:", "returncode:", "file:", "response:",
+            "✅", "✓", "status: ok", "passed", "verified"
+        ])
+        if not has_real_evidence:
+            warnings.append("confirmed_without_evidence")
+    
+    return content, warnings, blocked
+
+
+def _check_speculative_language(text):
+    """추정 표현 탐지 (정실장 시스템용)"""
+    import re
+    patterns = [
+        (_SPECULATIVE_EN, 'en'),
+        (_SPECULATIVE_KO, 'ko'),
+    ]
+    findings = []
+    for pattern, lang in patterns:
+        for match in re.finditer(pattern, text, re.IGNORECASE):
+            findings.append({"word": match.group(), "lang": lang, "position": match.start()})
+    return findings
+
+
 # ── API: 토큰 ──
 @app.route("/api/tokens", methods=["GET"])
 def api_tokens():
@@ -718,7 +1183,7 @@ def api_purchase_tokens():
         remaining = add_purchased_tokens(pack["tokens"])
         _log_history("purchase", f"purchased_{pack['tokens']}_tokens", {}, 0)
         return jsonify({"status": "ok", "tokens_added": pack["tokens"], "total_purchased": remaining})
-    return jsonify({"error": "유효하지 않은 토큰팩"})
+    return jsonify({"error": "invalid_token_pack"})
 
 
 # ── API: 설정 ──
@@ -1188,9 +1653,214 @@ def static_files(path):
     return send_from_directory(str(BASE_DIR.parent), path)
 
 
+# ── Devices (Workstation 관리) ──
+DEVICES_FILE = DATA_DIR / "devices.json"
+
+def _load_devices():
+    if DEVICES_FILE.exists():
+        return json.loads(DEVICES_FILE.read_text())
+    return {"devices": []}
+
+def _save_devices(data):
+    DEVICES_FILE.write_text(json.dumps(data, indent=2))
+
+# Plan별 최대 workstation 수
+MAX_WORKSTATIONS = {
+    "basic": 1, "trial": 1,
+    "pro": 3, "pro_plus": 5,
+    "enterprise": 10, "company_pro": 999
+}
+
+def get_plan_key(plan):
+    mapping = {"basic":"basic","trial":"basic","pro":"pro","pro_plus":"pro_plus","enterprise":"enterprise","company_pro":"company_pro"}
+    return mapping.get(plan, "basic")
+
+@app.route("/api/devices", methods=["GET"])
+def api_get_devices():
+    user = authenticate(request)
+    if not user:
+        return jsonify({"ok": False, "error": "authentication_required"}), 401
+    data = _load_devices()
+    user_devices = [d for d in data["devices"] if d["user_id"] == user["id"]]
+
+    # Mark inactive devices (90 days no contact)
+    import datetime as _dt
+    now = _dt.datetime.now()
+    for d in user_devices:
+        if d.get("active", True):
+            last = d.get("last_seen", d.get("created_at", ""))
+            if last:
+                try:
+                    last_dt = _dt.datetime.fromisoformat(last)
+                    if (now - last_dt).days >= 90:
+                        d["active"] = False
+                except:
+                    pass
+    _save_devices(data)
+
+    return jsonify({"ok": True, "devices": user_devices, "max_workstations": MAX_WORKSTATIONS.get(get_plan_key(user["plan"]), 1)})
+
+
+# ── Capability Refresh API ──
+
+@app.route("/api/agent/capabilities", methods=["GET"])
+def api_agent_capabilities():
+    """Return full capability object for the current agent session"""
+    # Try agent session auth first
+    auth = request.headers.get("Authorization", "")
+    token = auth.replace("Bearer ", "") if auth.startswith("Bearer ") else ""
+    plan = "trial"
+
+    # Check agent session
+    sessions_file = DATA_DIR / "agent_sessions.json"
+    if sessions_file.exists():
+        sessions = json.loads(sessions_file.read_text())
+        if token in sessions:
+            plan = sessions[token].get("plan", "trial")
+        else:
+            # Fallback to user auth
+            user = authenticate(request)
+            if user:
+                plan = user.get("plan", "trial")
+    else:
+        user = authenticate(request)
+        if user:
+            plan = user.get("plan", "trial")
+        if not user:
+            return jsonify({"ok": False, "error": "authentication_required"}), 401
+
+    plan_key = get_plan_key(plan)
+    plan_cfg = PLANS.get(plan, PLANS.get("trial", {}))
+    max_ws = MAX_WORKSTATIONS.get(plan_key, 1)
+    max_conc = MAX_CONCURRENT.get(plan, 1)
+
+    capabilities = {
+        "plan": plan,
+        "gpu_enabled": plan_key in ("pro", "pro_plus", "enterprise", "company_pro"),
+        "max_concurrent_tasks": max_conc,
+        "background_execution": plan_key in ("pro_plus", "enterprise", "company_pro"),
+        "team_enabled": plan_key in ("enterprise", "company_pro"),
+        "workstation_limit": max_ws,
+        "execution_credits_daily": plan_cfg.get("daily_tokens", 0),
+        "automation_enabled": plan_key != "basic",
+        "custom_skills_enabled": plan_key in ("pro_plus", "enterprise", "company_pro"),
+    }
+    return jsonify({"ok": True, "capabilities": capabilities})
+
+
+@app.route("/api/auth/sync-plan", methods=["POST"])
+def api_sync_plan():
+    """Sync user plan to agent config and license"""
+    user = authenticate(request)
+    if not user:
+        return jsonify({"ok": False, "error": "authentication_required"}), 401
+
+    # Update config.json with plan
+    cfg = _load_config()
+    cfg["plan"] = user["plan"]
+    cfg["pc_count"] = user.get("pc_count", 1)
+    _save_config(cfg)
+
+    # Update license.json
+    lic = DATA_DIR / "license.json"
+    if lic.exists():
+        license_data = json.loads(lic.read_text())
+        license_data["plan"] = user["plan"]
+        lic.write_text(json.dumps(license_data, indent=2))
+
+    # Update agent sessions
+    sessions_file = DATA_DIR / "agent_sessions.json"
+    if sessions_file.exists():
+        sessions = json.loads(sessions_file.read_text())
+        for s in sessions.values():
+            s["plan"] = user["plan"]
+        sessions_file.write_text(json.dumps(sessions, indent=2))
+
+    plan_key = get_plan_key(user["plan"])
+    plan_cfg = PLANS.get(user["plan"], PLANS.get("trial", {}))
+    max_ws = MAX_WORKSTATIONS.get(plan_key, 1)
+    max_conc = MAX_CONCURRENT.get(user["plan"], 1)
+
+    return jsonify({
+        "ok": True,
+        "message": "Plan synced. Capability reload recommended.",
+        "capabilities": {
+            "plan": user["plan"],
+            "gpu_enabled": plan_key in ("pro", "pro_plus", "enterprise", "company_pro"),
+            "max_concurrent_tasks": max_conc,
+            "background_execution": plan_key in ("pro_plus", "enterprise", "company_pro"),
+            "team_enabled": plan_key in ("enterprise", "company_pro"),
+            "workstation_limit": max_ws,
+            "automation_enabled": plan_key != "basic",
+        }
+    })
+
+
+# Update device register to accept fingerprint
+@app.route("/api/devices/register", methods=["POST"])
+def api_register_device():
+    import uuid
+    user = authenticate(request)
+    if not user:
+        return jsonify({"ok": False, "error": "authentication_required"}), 401
+    body = request.get_json() or {}
+    dev_id = body.get("device_id", "") or uuid.uuid4().hex[:12]
+    dev_name = body.get("device_name", "Unnamed PC")
+    gpu_name = body.get("gpu_name", "")
+    os_name = body.get("os_name", "")
+    mac_addr = body.get("mac_address", "")
+    disk_serial = body.get("disk_serial", "")
+    hostname = body.get("hostname", "")
+
+    # Build fingerprint (MAC + disk + hostname hash)
+    import hashlib
+    fp_raw = f"{mac_addr}:{disk_serial}:{hostname}"
+    fingerprint = hashlib.sha256(fp_raw.encode()).hexdigest()[:16] if fp_raw.strip(":") else dev_id
+
+    data = _load_devices()
+    user_devices = [d for d in data["devices"] if d["user_id"] == user["id"]]
+    max_ws = MAX_WORKSTATIONS.get(get_plan_key(user["plan"]), 1)
+
+    # Check if same fingerprint already registered (before limit check — allows re-registration)
+    for d in user_devices:
+        if d.get("fingerprint") == fingerprint:
+            d["last_seen"] = datetime.datetime.now().isoformat()
+            d["device_name"] = dev_name
+            d["gpu_name"] = gpu_name
+            d["os_name"] = os_name
+            _save_devices(data)
+            return jsonify({"ok": True, "device": d, "reused": True})
+
+    if len(user_devices) >= max_ws:
+        return jsonify({"ok": False, "error": "This account has reached its active workstation limit."}), 403
+
+    device = {
+        "id": dev_id,
+        "user_id": user["id"],
+        "device_id": dev_id,
+        "fingerprint": fingerprint,
+        "device_name": dev_name,
+        "gpu_name": gpu_name,
+        "os_name": os_name,
+        "mac_address": mac_addr,
+        "hostname": hostname,
+        "last_seen": datetime.datetime.now().isoformat(),
+        "created_at": datetime.datetime.now().isoformat(),
+        "active": True
+    }
+    data["devices"].append(device)
+    _save_devices(data)
+    return jsonify({"ok": True, "device": device, "reused": False})
+
+
 # ── 실행 ──
 
 if __name__ == "__main__":
+    # Add datetime import if not present
+    try: datetime
+    except NameError: from datetime import datetime
+
+    import argparse
     import argparse
     parser = argparse.ArgumentParser(description="Opera AI Agent")
     parser.add_argument("--port", type=int, default=5000, help="포트 번호")

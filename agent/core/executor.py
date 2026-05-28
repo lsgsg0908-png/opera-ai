@@ -3,6 +3,7 @@
 """
 import os
 import platform
+import shlex
 
 # GUI 모듈 조건부 로드 (헤드리스 환경 대응)
 _pyautogui = None
@@ -36,6 +37,146 @@ BLOCKED_COMMANDS = [
     "chmod 777 /", "chown", "passwd",
 ]
 
+# ── 권한 레벨 시스템 ──
+PERMISSION_SAFE = "SAFE"
+PERMISSION_ADVANCED = "ADVANCED"
+PERMISSION_DANGEROUS = "DANGEROUS"
+PERMISSION_SYSTEM = "SYSTEM"
+
+# 실행 함수별 권한 레벨 맵
+PERMISSION_MAP = {
+    # SAFE
+    "mouse_move": PERMISSION_SAFE,
+    "mouse_click": PERMISSION_SAFE,
+    "mouse_double_click": PERMISSION_SAFE,
+    "mouse_drag": PERMISSION_SAFE,
+    "mouse_scroll": PERMISSION_SAFE,
+    "get_mouse_position": PERMISSION_SAFE,
+    "keyboard_type": PERMISSION_SAFE,
+    "keyboard_press": PERMISSION_SAFE,
+    "keyboard_hotkey": PERMISSION_SAFE,
+    "screenshot": PERMISSION_SAFE,
+    "screen_size": PERMISSION_SAFE,
+    "locate_on_screen": PERMISSION_SAFE,
+    "window_list": PERMISSION_SAFE,
+    "get_active_window": PERMISSION_SAFE,
+    "file_read": PERMISSION_SAFE,
+    "file_list": PERMISSION_SAFE,
+    "file_search": PERMISSION_SAFE,
+    "file_copy": PERMISSION_SAFE,
+    "system_info": PERMISSION_SAFE,
+    "pc_status": PERMISSION_SAFE,
+    "clipboard_get": PERMISSION_SAFE,
+    "ocr_image": PERMISSION_SAFE,
+    # ADVANCED
+    "file_write": PERMISSION_ADVANCED,
+    "file_delete": PERMISSION_ADVANCED,
+    "window_activate": PERMISSION_ADVANCED,
+    "window_minimize": PERMISSION_ADVANCED,
+    "window_resize": PERMISSION_ADVANCED,
+    "process_kill": PERMISSION_ADVANCED,
+    "clipboard_set": PERMISSION_ADVANCED,
+    "wake_on_lan": PERMISSION_ADVANCED,
+    # DANGEROUS
+    "process_run": PERMISSION_DANGEROUS,
+    "shutdown_pc": PERMISSION_DANGEROUS,
+    # SYSTEM (현재 미구현 — 레지스트리/서비스/시작프로그램)
+}
+
+
+def _get_permission_level(action_name):
+    """실행 함수의 권한 레벨 반환"""
+    return PERMISSION_MAP.get(action_name, PERMISSION_SAFE)
+
+
+def _get_function_by_action(action_name):
+    """액션 이름에 해당하는 함수 참조 반환 (server.py _route_action 검증용)"""
+    mapping = {
+        "mouse_move": mouse_move,
+        "mouse_click": mouse_click,
+        "mouse_double_click": mouse_double_click,
+        "mouse_drag": mouse_drag,
+        "mouse_scroll": mouse_scroll,
+        "mouse_position": get_mouse_position,
+        "keyboard_type": keyboard_type,
+        "keyboard_press": keyboard_press,
+        "keyboard_hotkey": keyboard_hotkey,
+        "screenshot": screenshot,
+        "screen_size": screen_size,
+        "locate_on_screen": locate_on_screen,
+        "window_list": window_list,
+        "window_activate": window_activate,
+        "window_minimize": window_minimize,
+        "window_resize": window_resize,
+        "active_window": get_active_window,
+        "file_read": file_read,
+        "file_write": file_write,
+        "file_list": file_list,
+        "file_delete": file_delete,
+        "file_copy": file_copy,
+        "file_search": file_search,
+        "process_list": process_list,
+        "process_run": process_run,
+        "process_kill": process_kill,
+        "system_info": system_info,
+        "clipboard_get": clipboard_get,
+        "clipboard_set": clipboard_set,
+        "ocr": ocr_image,
+        "wake_on_lan": wake_on_lan,
+        "shutdown_pc": shutdown_pc,
+        "pc_status": pc_status,
+    }
+    return mapping.get(action_name)
+
+
+# ── 백업 / 롤백 시스템 ──
+BACKUP_DIR = Path(__file__).parent.parent / "data" / "backups"
+BACKUP_DIR.mkdir(parents=True, exist_ok=True)
+
+
+def _auto_backup(path):
+    """파일 쓰기/삭제 전 자동 백업"""
+    p = Path(path)
+    if not p.exists():
+        return None
+    ts = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+    backup_name = f"{p.name}.{ts}.bak"
+    backup_path = BACKUP_DIR / backup_name
+    try:
+        shutil.copy2(str(p), str(backup_path))
+        return str(backup_path)
+    except Exception:
+        return None
+
+
+def rollback_file(backup_path, target_path):
+    """백업 파일에서 복원"""
+    bp = Path(backup_path)
+    tp = Path(target_path)
+    if not bp.exists():
+        return {"error": "backup_file_not_found"}
+    try:
+        shutil.copy2(str(bp), str(tp))
+        return {"status": "ok", "restored": str(tp), "from": str(bp)}
+    except Exception as e:
+        return {"error": str(e)}
+
+
+def list_backups(prefix=""):
+    """백업 목록 조회"""
+    backups = []
+    for f in sorted(BACKUP_DIR.iterdir(), reverse=True):
+        if prefix and not f.name.startswith(prefix):
+            continue
+        if f.suffix == ".bak":
+            backups.append({
+                "name": f.name,
+                "path": str(f),
+                "size": f.stat().st_size,
+                "modified": datetime.datetime.fromtimestamp(f.stat().st_mtime).isoformat(),
+            })
+    return {"backups": backups[:100], "backup_dir": str(BACKUP_DIR)}
+
 
 def _is_path_blocked(path):
     """차단된 경로인지 확인"""
@@ -64,7 +205,7 @@ def _is_command_blocked(cmd):
 def mouse_move(x, y, duration=0.2):
     """마우스 이동"""
     if _pyautogui is None:
-        return {"error": "GUI 환경이 아닙니다 (헤드리스 서버)", "simulated": {"x": x, "y": y}}
+        return {"error": "gui_environment_not_available_headless_server", "simulated": {"x": x, "y": y}}
     _pyautogui.moveTo(x, y, duration=duration)
     return {"status": "ok", "x": x, "y": y}
 
@@ -222,7 +363,7 @@ def file_read(path):
     try:
         p = Path(path)
         if not p.exists():
-            return {"error": "파일을 찾을 수 없습니다"}
+            return {"error": "file_not_found"}
         content = p.read_text(encoding="utf-8", errors="replace")
         return {"status": "ok", "content": content[:50000], "size": len(content)}
     except Exception as e:
@@ -230,14 +371,19 @@ def file_read(path):
 
 
 def file_write(path, content):
-    """파일 쓰기"""
+    """파일 쓰기 (자동 백업 포함)"""
     if _is_path_blocked(path):
         return {"error": "접근이 차단된 경로입니다"}
     try:
         p = Path(path)
+        # 자동 백업 (기존 파일이 있을 경우)
+        backup_path = _auto_backup(str(p))
         p.parent.mkdir(parents=True, exist_ok=True)
         p.write_text(content, encoding="utf-8")
-        return {"status": "ok", "path": str(p), "size": len(content)}
+        result = {"status": "ok", "path": str(p), "size": len(content)}
+        if backup_path:
+            result["backup"] = backup_path
+        return result
     except Exception as e:
         return {"error": str(e)}
 
@@ -249,7 +395,7 @@ def file_list(path="."):
     try:
         p = Path(path)
         if not p.exists():
-            return {"error": "경로를 찾을 수 없습니다"}
+            return {"error": "path_not_found"}
         items = []
         for item in p.iterdir():
             items.append({
@@ -264,18 +410,26 @@ def file_list(path="."):
 
 
 def file_delete(path):
-    """파일/폴더 삭제 (중요 작업 → 2차 확인 필요)"""
+    """파일/폴더 삭제 (자동 백업 포함, 2차 확인 필요)"""
     if _is_path_blocked(path):
         return {"error": "접근이 차단된 경로입니다"}
     try:
         p = Path(path)
         if not p.exists():
-            return {"error": "파일을 찾을 수 없습니다"}
-        if p.is_dir():
+            return {"error": "file_not_found"}
+        # 자동 백업
+        backup_path = _auto_backup(str(p))
+        if p.is_dir() and p.is_symlink():
+            p.unlink()
+        elif p.is_dir():
             shutil.rmtree(p)
         else:
             p.unlink()
-        return {"status": "ok", "deleted": str(p)}
+        result = {"status": "ok", "deleted": str(p)}
+        if backup_path:
+            result["backup"] = backup_path
+            result["rollback_hint"] = f"rollback_file('{backup_path}', '{p}')"
+        return result
     except Exception as e:
         return {"error": str(e)}
 
@@ -327,12 +481,13 @@ def process_list():
 
 
 def process_run(command, timeout=30):
-    """명령어 실행"""
+    """명령어 실행 (shell=False, shlex 기반 안전 실행)"""
     if _is_command_blocked(command):
-        return {"error": "차단된 명령어입니다"}
+        return {"error": "command_is_blocked"}
     try:
+        args = shlex.split(command)
         result = subprocess.run(
-            command, shell=True, capture_output=True, text=True, timeout=timeout
+            args, shell=False, capture_output=True, text=True, timeout=timeout
         )
         return {
             "status": "ok",
@@ -341,7 +496,7 @@ def process_run(command, timeout=30):
             "stderr": result.stderr[:1000],
         }
     except subprocess.TimeoutExpired:
-        return {"error": "시간 초과"}
+        return {"error": "timeout_expired"}
     except Exception as e:
         return {"error": str(e)}
 
@@ -415,7 +570,7 @@ def ocr_image(image_path, lang="kor+eng"):
         text = pytesseract.image_to_string(img, lang=lang)
         return {"status": "ok", "text": text.strip()}
     except ImportError:
-        return {"error": "Tesseract OCR이 설치되지 않았습니다"}
+        return {"error": "tesseract_ocr_not_installed"}
     except Exception as e:
         return {"error": str(e)}
 
@@ -457,15 +612,16 @@ def wake_on_lan(mac_address, broadcast_ip="255.255.255.255", port=9):
 
 
 def shutdown_pc(delay=0):
-    """PC 종료"""
+    """PC 종료 (shell=False, shlex 기반 안전 실행)"""
     import platform
     os_name = platform.system().lower()
     try:
         if os_name == "windows":
-            cmd = f"shutdown /s /t {delay}" if delay > 0 else "shutdown /s"
+            cmd_str = f"shutdown /s /t {delay}" if delay > 0 else "shutdown /s"
         else:
-            cmd = f"shutdown -h +{delay}" if delay > 0 else "shutdown -h now"
-        subprocess.run(cmd, shell=True, timeout=5)
+            cmd_str = f"shutdown -h +{delay}" if delay > 0 else "shutdown -h now"
+        args = shlex.split(cmd_str)
+        subprocess.run(args, shell=False, timeout=5)
         return {"status": "ok", "action": "shutdown", "delay": delay}
     except Exception as e:
         return {"error": str(e)}
@@ -482,3 +638,122 @@ def pc_status():
         "cpu_usage": psutil.cpu_percent(interval=0.1),
         "memory_percent": psutil.virtual_memory().percent,
     }
+
+
+# ── GPU 감지 시스템 ──
+def detect_gpu():
+    """로컬 PC GPU 감지 및 등급 분류"""
+    import subprocess, re
+    result = {
+        "available": False,
+        "type": None,           # "nvidia" / "amd" / "apple" / "intel" / "none"
+        "name": None,
+        "vram_mb": 0,
+        "grade": None,          # "high" / "mid" / "low" / "none"
+        "capability": {
+            "image_gen": False,
+            "video_gen": False,
+            "speed_estimate": None
+        }
+    }
+    
+    # 1. NVIDIA GPU 감지 (nvidia-smi)
+    try:
+        r = subprocess.run(["nvidia-smi", "--query-gpu=name,memory.total", "--format=csv,noheader,nounits"],
+                          capture_output=True, text=True, timeout=5)
+        if r.returncode == 0 and r.stdout.strip():
+            parts = r.stdout.strip().split(",")
+            name = parts[0].strip()
+            vram = int(parts[1].strip())
+            result["available"] = True
+            result["type"] = "nvidia"
+            result["name"] = name
+            result["vram_mb"] = vram
+            # 등급 분류
+            if vram >= 10000:
+                result["grade"] = "high"
+                result["capability"]["image_gen"] = True
+                result["capability"]["video_gen"] = True
+                result["capability"]["speed_estimate"] = f"초고속 (1~2초/장)"
+            elif vram >= 6000:
+                result["grade"] = "mid"
+                result["capability"]["image_gen"] = True
+                result["capability"]["video_gen"] = True
+                result["capability"]["speed_estimate"] = f"보통 (2~5초/장)"
+            else:
+                result["grade"] = "low"
+                result["capability"]["image_gen"] = True
+                result["capability"]["video_gen"] = False
+                result["capability"]["speed_estimate"] = f"저속 (5~15초/장)"
+            return result
+    except:
+        pass
+    
+    # 2. AMD GPU 감지 (rocm-smi)
+    try:
+        r = subprocess.run(["rocm-smi", "--showproductname"],
+                          capture_output=True, text=True, timeout=5)
+        if r.returncode == 0 and r.stdout.strip():
+            result["available"] = True
+            result["type"] = "amd"
+            result["name"] = r.stdout.strip()[:50]
+            result["grade"] = "mid"
+            result["capability"]["image_gen"] = True
+            result["capability"]["video_gen"] = True
+            result["capability"]["speed_estimate"] = "보통"
+            return result
+    except:
+        pass
+    
+    # 3. Apple Silicon 감지
+    import platform as _pf
+    if _pf.system() == "Darwin" and _pf.machine() == "arm64":
+        result["available"] = True
+        result["type"] = "apple"
+        result["name"] = "Apple Silicon"
+        result["grade"] = "mid"
+        result["capability"]["image_gen"] = True
+        result["capability"]["video_gen"] = True
+        result["capability"]["speed_estimate"] = "보통 (M1/M2/M3)"
+        return result
+    
+    # 4. GPU 없음
+    result["grade"] = "none"
+    result["capability"]["image_gen"] = False
+    result["capability"]["video_gen"] = False
+    result["capability"]["speed_estimate"] = "CPU 모드 (30초~2분/장)"
+    return result
+
+
+def get_gpu_install_message(gpu_info):
+    """GPU 등급별 설치 안내 메시지"""
+    grade = gpu_info.get("grade")
+    name = gpu_info.get("name", "Unknown GPU")
+    
+    messages = {
+        "high": (
+            f"✅ 감지된 GPU: {name} ({gpu_info['vram_mb']}MB VRAM)\n"
+            f"이미지 생성: 초고속 (1~2초/장)\n"
+            f"영상 제작: 가능 (30초 영상 약 2~3분)\n"
+            f"GPU 가속 모듈(PyTorch + diffusers, 약 800MB)을 설치하시겠습니까?"
+        ),
+        "mid": (
+            f"🟢 감지된 GPU: {name}\n"
+            f"이미지 생성: 가능 (2~5초/장)\n"
+            f"영상 제작: 가능 (30초 영상 약 5~10분)\n"
+            f"GPU 가속 모듈을 설치하시겠습니까?"
+        ),
+        "low": (
+            f"🟡 감지된 GPU: {name} ({gpu_info['vram_mb']}MB VRAM)\n"
+            f"이미지 생성: 가능 (기본 해상도, 5~15초/장)\n"
+            f"영상 제작: 제한적 (짧은 클립만 가능)\n"
+            f"GPU 가속 모듈을 설치하시겠습니까? (CPU보다 약 5배 빠름)"
+        ),
+        "none": (
+            "🔲 GPU 가속을 지원하지 않는 PC입니다.\n"
+            "이미지 생성: 가능 (1장당 30초~2분 소요, CPU 모드)\n"
+            "영상 제작: CPU 모드로는 권장하지 않습니다."
+        ),
+    }
+    return messages.get(grade, messages["none"])
+

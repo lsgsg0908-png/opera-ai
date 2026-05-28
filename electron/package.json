@@ -1,0 +1,79 @@
+{
+  "name": "opera-ai",
+  "version": "1.0.0",
+  "description": "OPERA AI — Local AI Execution Platform. Runs on your machine.",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "build:win": "electron-builder --win --config",
+    "build:mac": "electron-builder --mac --config",
+    "build:linux": "electron-builder --linux --config"
+  },
+  "build": {
+    "appId": "ai.opera.desktop",
+    "productName": "OPERA AI",
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "main.js",
+      "preload.js",
+      "renderer/**/*",
+      "icons/**/*",
+      "package.json"
+    ],
+    "extraResources": [
+      {
+        "from": "../agent",
+        "to": "agent",
+        "filter": [
+          "**/*",
+          "!__pycache__/**",
+          "!.pytest_cache/**",
+          "!venv/**",
+          "!.env",
+          "!.env.*",
+          "!data/**",
+          "!tests/**",
+          "!plc_logs/**",
+          "!*.bak",
+          "!*.db",
+          "!*.db-*",
+          "!*.log"
+        ]
+      }
+    ],
+    "win": {
+      "target": [
+        "nsis"
+      ],
+      "icon": "icons/icon.png"
+    },
+    "mac": {
+      "target": [
+        "dmg"
+      ],
+      "icon": "icons/icon.png"
+    },
+    "linux": {
+      "target": [
+        "AppImage"
+      ],
+      "icon": "icons/icon.png"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "runAfterFinish": true,
+      "createDesktopShortcut": true
+    }
+  },
+  "dependencies": {
+    "electron-store": "^8.2.0",
+    "node-fetch": "^3.3.0"
+  },
+  "devDependencies": {
+    "electron": "^33.0.0",
+    "electron-builder": "^25.0.0"
+  }
+}

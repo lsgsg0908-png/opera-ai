@@ -6,3 +6,28 @@ agent/data/history/
 .DS_Store
 venv/
 .env
+
+# Electron
+electron/node_modules/
+
+# Backup files
+*.bak
+*.bak*
+
+# Build output
+electron/dist/
+
+# Local download staging
+pages/downloads/*.exe
+pages/downloads/*.dmg
+pages/downloads/README.txt
+
+# Runtime data files
+agent/data/agent_hmac.key
+agent/data/backups/
+
+# PLC tools (legacy)
+agent/tools/plc_*
+agent/plc_logs/
+*.v2bak
+pages/downloads/

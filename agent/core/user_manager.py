@@ -1,20 +1,28 @@
-"""
-사용자 관리 — 회원가입, 로그인, JWT, 세션
-"""
+# User management -- register, login, JWT, session
+"""User management module."""
 import json
 import uuid
 import hashlib
-import hmac
+import os
 import time
 from datetime import datetime, timedelta
 from pathlib import Path
+import jwt
 
 DATA_DIR = Path(__file__).parent.parent / "data"
 USER_FILE = DATA_DIR / "users.json"
 SESSION_FILE = DATA_DIR / "sessions.json"
 
-JWT_SECRET = hashlib.sha256(b"OPERA_AI_2026_LOCAL_SECRET").hexdigest()
 JWT_EXPIRY_HOURS = 24
+_JWT_SECRET = None
+
+
+def _get_jwt_secret():
+    """JWT_SECRET lazy load — must be called after .env loading"""
+    global _JWT_SECRET
+    if _JWT_SECRET is None:
+        _JWT_SECRET = os.getenv("JWT_SECRET", "") or hashlib.sha256(os.urandom(64)).hexdigest()
+    return _JWT_SECRET
 
 
 def _load_users():
@@ -59,65 +67,59 @@ def _generate_token(user_id, plan="trial"):
         "iat": int(time.time()),
         "exp": int(time.time()) + JWT_EXPIRY_HOURS * 3600,
     }
-    payload_str = json.dumps(payload, sort_keys=True)
-    sig = hmac.new(JWT_SECRET.encode(), payload_str.encode(), hashlib.sha256).hexdigest()
-    return f"{payload_str}.{sig}"
+    return jwt.encode(payload, _get_jwt_secret(), algorithm="HS256")
 
 
 def _verify_token(token):
     try:
-        payload_str, sig = token.rsplit(".", 1)
-        expected = hmac.new(JWT_SECRET.encode(), payload_str.encode(), hashlib.sha256).hexdigest()
-        if not hmac.compare_digest(sig, expected):
-            return None
-        payload = json.loads(payload_str)
-        if payload["exp"] < time.time():
-            return None
-        return payload
-    except Exception:
+        return jwt.decode(token, _get_jwt_secret(), algorithms=["HS256"])
+    except jwt.ExpiredSignatureError:
+        return None
+    except jwt.InvalidTokenError:
         return None
 
 
 def _validate_password(password):
-    """비밀번호 정책 검증"""
+    """Password policy validation"""
     errors = []
     if len(password) < 8:
-        errors.append("최소 8자 이상")
+        errors.append("at least 8 characters")
     if len(password) > 128:
-        errors.append("최대 128자 이하")
+        errors.append("at most 128 characters")
     if not any(c.isupper() for c in password):
-        errors.append("대문자 포함")
+        errors.append("at least one uppercase letter")
     if not any(c.islower() for c in password):
-        errors.append("소문자 포함")
+        errors.append("at least one lowercase letter")
     if not any(c.isdigit() for c in password):
-        errors.append("숫자 포함")
+        errors.append("at least one number")
     return errors
 
 
 def _validate_email(email):
-    """이메일 형식 검증"""
+    """Email format validation"""
     import re
     pattern = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
     return bool(re.match(pattern, email))
 
 
 def register(email, password, username=""):
-    """회원가입"""
-    # 입력 검증
+    """Register a new user"""
+    # Input validation
     if not email or not password:
-        return {"error": "이메일과 비밀번호를 입력해주세요"}
+        return {"error": "Email and password are required."}
     if not _validate_email(email):
-        return {"error": "올바른 이메일 형식이 아닙니다"}
+        return {"error": "Invalid email format."}
     pw_errors = _validate_password(password)
     if pw_errors:
-        return {"error": "비밀번호 정책 위반: " + ", ".join(pw_errors)}
+        return {"error": "Password policy: " + ", ".join(pw_errors)}
     
     data = _load_users()
     if any(u["email"] == email for u in data["users"]):
-        return {"error": "이미 등록된 이메일입니다"}
+        return {"error": "An account with this email already exists."}
     if any(u["username"] == username for u in data["users"]):
-        return {"error": "이미 사용 중인 사용자명입니다"}
+        return {"error": "Username already taken."}
 
+    now = datetime.now()
     user_id = f"u_{uuid.uuid4().hex[:8]}"
     user = {
         "id": user_id,
@@ -125,15 +127,17 @@ def register(email, password, username=""):
         "username": username or email.split("@")[0],
         "password_hash": _hash_password(password),
         "plan": "trial",
-        "trial_start": datetime.now().isoformat(),
+        "role": "user",
+        "trial_start": now.isoformat(),
+        "trial_end": (now + timedelta(days=3)).isoformat(),
         "pc_count": 1,
-        "created_at": datetime.now().isoformat(),
+        "created_at": now.isoformat(),
         "verified": True,
     }
     data["users"].append(user)
     _save_users(data)
 
-    # 자동 라이선스 발급
+    # Auto license generation
     from core.payment import create_subscription
     lic = create_subscription("trial", "monthly", 1, user_id)
 
@@ -142,26 +146,29 @@ def register(email, password, username=""):
 
 
 def login(email, password):
-    """로그인"""
+    """Log in"""
     data = _load_users()
     user = next((u for u in data["users"] if u["email"] == email), None)
     if not user:
-        return {"error": "이메일 또는 비밀번호가 올바르지 않습니다"}
+        return {"error": "Invalid email or password."}
     if not _verify_password(password, user["password_hash"]):
-        return {"error": "이메일 또는 비밀번호가 올바르지 않습니다"}
+        return {"error": "Invalid email or password."}
 
     token = _generate_token(user["id"], user["plan"])
     return {
+        "ok": True,
         "status": "logged_in",
         "user_id": user["id"],
         "username": user["username"],
+        "email": user["email"],
         "plan": user["plan"],
+        "role": user.get("role", "user"),
         "token": token,
     }
 
 
 def get_user(user_id):
-    """사용자 정보"""
+    """Get user info"""
     data = _load_users()
     user = next((u for u in data["users"] if u["id"] == user_id), None)
     if not user:
@@ -171,13 +178,17 @@ def get_user(user_id):
         "email": user["email"],
         "username": user["username"],
         "plan": user["plan"],
+        "role": user.get("role", "user"),
         "pc_count": user.get("pc_count", 1),
+        "verified": user.get("verified", False),
+        "trial_start": user.get("trial_start", ""),
+        "trial_end": user.get("trial_end", ""),
         "created_at": user["created_at"],
     }
 
 
 def authenticate(request):
-    """요청에서 사용자 인증"""
+    """Authenticate user from request"""
     auth = request.headers.get("Authorization", "")
     if auth.startswith("Bearer "):
         token = auth[7:]
@@ -188,7 +199,7 @@ def authenticate(request):
     if not payload:
         return None
 
-    # 세션 만료 확인 (로그아웃된 토큰)
+    # Session expiry check (logged out token)
     sessions = _load_sessions()
     if token in [s.get("token") for s in sessions.get("blacklist", [])]:
         return None
@@ -197,7 +208,7 @@ def authenticate(request):
     if not user:
         return None
 
-    # plan 동기화
+    # Plan sync
     from core.token_manager import _load_config, _save_config
     cfg = _load_config()
     cfg["plan"] = user["plan"]
@@ -208,7 +219,7 @@ def authenticate(request):
 
 
 def logout(token):
-    """로그아웃 (토큰 블랙리스트)"""
+    """Logout (token blacklist)"""
     sessions = _load_sessions()
     if "blacklist" not in sessions:
         sessions["blacklist"] = []
@@ -216,7 +227,7 @@ def logout(token):
         "token": token,
         "invalidated_at": datetime.now().isoformat(),
     })
-    # 100개 이상이면 오래된 것 정리
+    # Clean up old entries if over 100
     if len(sessions["blacklist"]) > 100:
         sessions["blacklist"] = sessions["blacklist"][-100:]
     _save_sessions(sessions)
@@ -224,20 +235,20 @@ def logout(token):
 
 
 def force_logout_all(user_id):
-    """특정 사용자의 모든 세션 강제 로그아웃"""
+    """Force logout all sessions for a user"""
     data = _load_users()
     user = next((u for u in data["users"] if u["id"] == user_id), None)
     if not user:
         return {"error": "user_not_found"}
 
-    # 비밀번호 해시 변경 (모든 기존 토큰 무효화)
+    # Password hash change (invalidates all existing tokens)
     user["password_hash"] = _hash_password(
         user["password_hash"].split("$")[0],
         uuid.uuid4().hex[:16]
     )
     _save_users(data)
 
-    # 세션 블랙리스트에 특수 태그
+    # Special tag in session blacklist
     sessions = _load_sessions()
     if "force_logouts" not in sessions:
         sessions["force_logouts"] = []
